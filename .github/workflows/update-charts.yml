@@ -27,8 +27,7 @@
 
       - name: Install R packages
         run: |
-          R -e "install.packages(c('googlesheets4', 'ggplot2', 'dplyr', 'lubridate', 'jsonlite', 'RColorBrewer', 'tidyr'), 
-  repos='https://cran.r-project.org')"
+          R -e "install.packages(c('googlesheets4', 'ggplot2', 'dplyr', 'lubridate', 'jsonlite', 'RColorBrewer', 'tidyr'), repos='https://cran.r-project.org')"
 
       - name: Create auth token file
         run: |
