@@ -121,12 +121,12 @@ generate_weight_comparison_chart <- function(duthanga_geral, duthanga_refeicao, 
   meta_peso <- 73
   
   p <- ggplot(all_data, aes(x = data, y = peso_kg, color = secao)) +
-    geom_line(size = 1.2, alpha = 0.8) +
+    geom_line(linewidth = 1.2, alpha = 0.8) +
     geom_point(size = 3, alpha = 0.9) +
-    geom_hline(yintercept = meta_peso, color = "#4CAF50", linetype = "dashed", size = 1) +
-    geom_text(aes(x = max(data, na.rm = TRUE), y = meta_peso + 0.5), 
-              label = paste("Meta:", meta_peso, "kg"), 
-              color = "#4CAF50", hjust = 1, fontface = "bold", inherit.aes = FALSE) +
+    geom_hline(yintercept = meta_peso, color = "darkgreen", linetype = "dashed", linewidth = 1) +
+    annotate("text", x = max(all_data$data, na.rm = TRUE), y = meta_peso + 0.5, 
+             label = paste("Meta:", meta_peso, "kg"), 
+             color = "darkgreen", hjust = 1, fontface = "bold") +
     labs(
       title = "Evolucao do Peso por Pratica",
       subtitle = "Comparacao entre praticas budistas e ganho de peso",
@@ -146,9 +146,9 @@ generate_weight_comparison_chart <- function(duthanga_geral, duthanga_refeicao, 
       panel.background = element_rect(fill = "white", color = NA),
       plot.background = element_rect(fill = "white", color = NA)
     ) +
-    scale_color_manual(values = c("Duthanga Geral" = "#FF6B6B", 
-                                  "Duthanga Uma Refeicao" = "#4ECDC4", 
-                                  "Ganho de Peso" = "#45B7D1")) +
+    scale_color_manual(values = c("Duthanga Geral" = "red", 
+                                  "Duthanga Uma Refeicao" = "blue", 
+                                  "Ganho de Peso" = "orange")) +
     scale_x_date(date_labels = "%m/%d", date_breaks = "1 week")
   
   ggsave("charts/weight_comparison.png", plot = p, width = 14, height = 8, dpi = 300, bg = "white")
@@ -184,7 +184,7 @@ generate_measurements_by_section <- function(section_data, section_name) {
   }
   
   p <- ggplot(measurements_long, aes(x = data, y = valor, color = medida)) +
-    geom_line(size = 1.1, alpha = 0.8) +
+    geom_line(linewidth = 1.1, alpha = 0.8) +
     geom_point(size = 2.5, alpha = 0.9) +
     labs(
       title = paste("Medidas Corporais -", section_name),
@@ -237,15 +237,15 @@ generate_imc_comparison <- function(duthanga_geral, duthanga_refeicao, ganho_pes
   }
   
   p <- ggplot(all_data, aes(x = data, y = imc, color = secao)) +
-    geom_line(size = 1.2, alpha = 0.8) +
+    geom_line(linewidth = 1.2, alpha = 0.8) +
     geom_point(size = 3, alpha = 0.9) +
-    geom_hline(yintercept = 18.5, color = "#ff9800", linetype = "dotted", alpha = 0.7) +
-    geom_hline(yintercept = 25, color = "#f44336", linetype = "dashed", alpha = 0.7) +
-    geom_hline(yintercept = 30, color = "#e91e63", linetype = "dashed", alpha = 0.7) +
+    geom_hline(yintercept = 18.5, color = "orange", linetype = "dotted", alpha = 0.7) +
+    geom_hline(yintercept = 25, color = "red", linetype = "dashed", alpha = 0.7) +
+    geom_hline(yintercept = 30, color = "darkred", linetype = "dashed", alpha = 0.7) +
     annotate("text", x = max(all_data$data, na.rm = TRUE), y = 18.5, label = "Abaixo do peso", 
-             hjust = 1, vjust = -0.5, size = 3, color = "#ff9800") +
+             hjust = 1, vjust = -0.5, size = 3, color = "orange") +
     annotate("text", x = max(all_data$data, na.rm = TRUE), y = 25, label = "Sobrepeso", 
-             hjust = 1, vjust = -0.5, size = 3, color = "#f44336") +
+             hjust = 1, vjust = -0.5, size = 3, color = "red") +
     labs(
       title = "Evolucao do IMC por Pratica",
       subtitle = "Acompanhamento do indice de massa corporal",
@@ -265,9 +265,9 @@ generate_imc_comparison <- function(duthanga_geral, duthanga_refeicao, ganho_pes
       panel.background = element_rect(fill = "white", color = NA),
       plot.background = element_rect(fill = "white", color = NA)
     ) +
-    scale_color_manual(values = c("Duthanga Geral" = "#FF6B6B", 
-                                  "Duthanga Uma Refeicao" = "#4ECDC4", 
-                                  "Ganho de Peso" = "#45B7D1")) +
+    scale_color_manual(values = c("Duthanga Geral" = "red", 
+                                  "Duthanga Uma Refeicao" = "blue", 
+                                  "Ganho de Peso" = "orange")) +
     scale_x_date(date_labels = "%m/%d", date_breaks = "1 week")
   
   ggsave("charts/imc_comparison.png", plot = p, width = 14, height = 8, dpi = 300, bg = "white")
