@@ -194,12 +194,18 @@ generate_weight_comparison_chart <- function(duthanga_geral, duthanga_refeicao, 
       y = "Peso (kg)",
       color = "Pratica"
     ) +
+    scale_x_date(
+      date_breaks = "2 months",
+      date_labels = "%b\n%Y",
+      expand = c(0.02, 0)
+    ) +
     theme_minimal() +
     theme(
       plot.title = element_text(size = 16, face = "bold", color = "black"),
       plot.subtitle = element_text(size = 12, color = "gray"),
       axis.title = element_text(size = 12, face = "bold"),
       axis.text = element_text(size = 10),
+      axis.text.x = element_text(angle = 0, hjust = 0.5),
       legend.title = element_text(size = 12, face = "bold"),
       legend.text = element_text(size = 10),
       panel.grid.minor = element_blank(),
@@ -253,12 +259,18 @@ generate_measurements_by_section <- function(section_data, section_name) {
       y = "Medida (cm)",
       color = "Regiao"
     ) +
+    scale_x_date(
+      date_breaks = "2 months",
+      date_labels = "%b\n%Y",
+      expand = c(0.02, 0)
+    ) +
     theme_minimal() +
     theme(
       plot.title = element_text(size = 14, face = "bold", color = "black"),
       plot.subtitle = element_text(size = 10, color = "gray"),
       axis.title = element_text(size = 10, face = "bold"),
       axis.text = element_text(size = 9),
+      axis.text.x = element_text(angle = 0, hjust = 0.5),
       legend.title = element_text(size = 10, face = "bold"),
       legend.text = element_text(size = 9),
       panel.grid.minor = element_blank(),
@@ -312,12 +324,18 @@ generate_imc_comparison <- function(duthanga_geral, duthanga_refeicao, ganho_pes
       y = "IMC",
       color = "Pratica"
     ) +
+    scale_x_date(
+      date_breaks = "2 months",
+      date_labels = "%b\n%Y",
+      expand = c(0.02, 0)
+    ) +
     theme_minimal() +
     theme(
       plot.title = element_text(size = 16, face = "bold", color = "black"),
       plot.subtitle = element_text(size = 12, color = "gray"),
       axis.title = element_text(size = 12, face = "bold"),
       axis.text = element_text(size = 10),
+      axis.text.x = element_text(angle = 0, hjust = 0.5),
       legend.title = element_text(size = 12, face = "bold"),
       legend.text = element_text(size = 10),
       panel.grid.minor = element_blank(),
