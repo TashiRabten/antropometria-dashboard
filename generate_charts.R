@@ -35,8 +35,8 @@ read_anthropometry_data <- function() {
         cintura_cm = as.numeric(cintura_cm),
         quadril_cm = as.numeric(quadril_cm),
         panturrilha_cm = as.numeric(panturrilha_cm),
-        # Calcular IMC (assumindo altura de 1.75m - ajustar conforme necessário)
-        altura_m = 1.75,
+        # Calcular IMC (assumindo altura de 1.78m - ajustar conforme necessário)
+        altura_m = 1.78,
         imc = peso_kg / (altura_m^2)
       ) %>%
       arrange(data)
@@ -227,4 +227,5 @@ main <- function() {
 # Executar se script for chamado diretamente
 if(!interactive()) {
   main()
+
 }
