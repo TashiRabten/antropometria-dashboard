@@ -28,16 +28,27 @@
        })
      }
 
-     # Função para parser de horário (hh.mm)
-     parse_time <- function(time_decimal) {
+     # Função para parser de horário (hh.mm ou h.mm)
+     parse_time <- function(time_input) {
        tryCatch({
+      # Converter para número se for string
+         time_decimal <- as.numeric(time_input)
+
+      # Separar horas e minutos
          hours <- floor(time_decimal)
          minutes <- round((time_decimal - hours) * 100)
+
+      # Validar valores
+         if(hours < 0 || hours > 23) return(NA)
+         if(minutes < 0 || minutes > 59) return(NA)
+
+      # Formatar como HH:MM
          sprintf("%02d:%02d", hours, minutes)
        }, error = function(e) {
          return(NA)
        })
      }
+
 
      # Função para ler dados de uma seção específica
      read_section_data <- function(start_row, section_name) {
@@ -379,8 +390,8 @@
        cat("Lendo dados de Duthanga Uma Refeição (linha 32+)...\n")
        duthanga_refeicao <- read_section_data(32, "Duthanga Uma Refeição")
 
-       cat("Lendo dados de Ganho de Peso (linha 53+)...\n")
-       ganho_peso <- read_section_data(53, "Ganho de Peso")
+       cat("Lendo dados de Ganho de Peso (linha 47+)...\n")
+       ganho_peso <- read_section_data(47, "Ganho de Peso")
 
        # Verificar se temos dados
        if(is.null(duthanga_geral) && is.null(duthanga_refeicao) && is.null(ganho_peso)) {
@@ -430,3 +441,4 @@
      if(!interactive()) {
        main()
      }
+
