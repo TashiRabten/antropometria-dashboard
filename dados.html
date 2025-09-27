@@ -348,6 +348,23 @@
                         buttons: ['csv', 'excel', 'print'],
                         pageLength: 25,
                         order: [[0, 'desc']],
+                        columnDefs: [
+                            {
+                                targets: 0,
+                                type: 'date-eu',
+                                render: function(data, type, row) {
+                                    if (type === 'sort' || type === 'type') {
+                                        // Converter dd/mm/yyyy para yyyy-mm-dd para ordenação
+                                        var parts = data.split('/');
+                                        if (parts.length === 3) {
+                                            return parts[2] + '-' + parts[1] + '-' + parts[0];
+                                        }
+                                        return data;
+                                    }
+                                    return data;
+                                }
+                            }
+                        ],
                         language: {
                             url: '//cdn.datatables.net/plug-ins/1.10.24/i18n/Portuguese-Brasil.json'
                         }

@@ -86,18 +86,24 @@ parse_date_flexible <- function(date_input) {
   return(result)
 }
 
-# Funcao para parser de horario
+# Funcao MELHORADA para parser de horario
 parse_time <- function(time_input) {
   tryCatch({
+    # Extrair valor se for lista (mesmo problema do Google Sheets)
+    if(is.list(time_input) && length(time_input) > 0) {
+      time_input <- time_input[[1]]
+    }
+    
     time_decimal <- as.numeric(as.character(time_input))
-    if(is.na(time_decimal)) return(NA)
+    if(is.na(time_decimal)) return("-")  # Retorna "-" em vez de NA para mostrar na tabela
+    
     hours <- floor(time_decimal)
     minutes <- round((time_decimal - hours) * 100)
-    if(hours < 0 || hours > 23) return(NA)
-    if(minutes < 0 || minutes > 59) return(NA)
+    if(hours < 0 || hours > 23) return("-")
+    if(minutes < 0 || minutes > 59) return("-")
     sprintf("%02d:%02d", hours, minutes)
   }, error = function(e) {
-    return(NA)
+    return("-")  # Retorna "-" em vez de NA
   })
 }
 
@@ -500,27 +506,27 @@ generate_json_data <- function(duthanga_geral, duthanga_refeicao, ganho_peso) {
     most_recent <- list(peso_kg = 70, imc = 22.9)
   }
   
-  current_weight <- ifelse(is.null(most_recent$peso_kg) || is.na(most_recent$peso_kg), 70, most_recent$peso_kg)
-  current_imc <- ifelse(is.null(most_recent$imc) || is.na(most_recent$imc), 22.9, most_recent$imc)
+  current_weight <- as.numeric(ifelse(is.null(most_recent$peso_kg) || is.na(most_recent$peso_kg), 70, most_recent$peso_kg))
+  current_imc <- as.numeric(ifelse(is.null(most_recent$imc) || is.na(most_recent$imc), 22.9, most_recent$imc))
   
   summary_data <- list(
-    last_update = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
-    current_weight = current_weight,
-    current_imc = round(current_imc, 1),
-    goal_weight = 73,
-    progress_to_goal = 73 - current_weight,
+    last_update = as.character(format(Sys.time(), "%Y-%m-%d %H:%M:%S")),
+    current_weight = as.numeric(current_weight),
+    current_imc = as.numeric(round(current_imc, 1)),
+    goal_weight = as.numeric(73),
+    progress_to_goal = as.numeric(73 - current_weight),
     sections = list(
       duthanga_geral = list(
-        records = nrow(duthanga_geral),
-        latest_date = if(nrow(duthanga_geral) > 0) format(max(duthanga_geral$data, na.rm = TRUE), "%Y-%m-%d") else NULL
+        records = as.numeric(nrow(duthanga_geral)),
+        latest_date = if(nrow(duthanga_geral) > 0) as.character(format(max(duthanga_geral$data, na.rm = TRUE), "%Y-%m-%d")) else NULL
       ),
       duthanga_refeicao = list(
-        records = nrow(duthanga_refeicao),
-        latest_date = if(nrow(duthanga_refeicao) > 0) format(max(duthanga_refeicao$data, na.rm = TRUE), "%Y-%m-%d") else NULL
+        records = as.numeric(nrow(duthanga_refeicao)),
+        latest_date = if(nrow(duthanga_refeicao) > 0) as.character(format(max(duthanga_refeicao$data, na.rm = TRUE), "%Y-%m-%d")) else NULL
       ),
       ganho_peso = list(
-        records = nrow(ganho_peso),
-        latest_date = if(nrow(ganho_peso) > 0) format(max(ganho_peso$data, na.rm = TRUE), "%Y-%m-%d") else NULL
+        records = as.numeric(nrow(ganho_peso)),
+        latest_date = if(nrow(ganho_peso) > 0) as.character(format(max(ganho_peso$data, na.rm = TRUE), "%Y-%m-%d")) else NULL
       )
     )
   )
