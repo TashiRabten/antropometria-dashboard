@@ -136,8 +136,8 @@ generate_weight_comparison_chart <- function(duthanga_geral, duthanga_refeicao, 
     ) +
     theme_minimal() +
     theme(
-      plot.title = element_text(size = 16, face = "bold", color = "#333"),
-      plot.subtitle = element_text(size = 12, color = "#666"),
+      plot.title = element_text(size = 16, face = "bold", color = "black"),
+      plot.subtitle = element_text(size = 12, color = "gray"),
       axis.title = element_text(size = 12, face = "bold"),
       axis.text = element_text(size = 10),
       legend.title = element_text(size = 12, face = "bold"),
@@ -195,8 +195,8 @@ generate_measurements_by_section <- function(section_data, section_name) {
     ) +
     theme_minimal() +
     theme(
-      plot.title = element_text(size = 14, face = "bold", color = "#333"),
-      plot.subtitle = element_text(size = 10, color = "#666"),
+      plot.title = element_text(size = 14, face = "bold", color = "black"),
+      plot.subtitle = element_text(size = 10, color = "gray"),
       axis.title = element_text(size = 10, face = "bold"),
       axis.text = element_text(size = 9),
       legend.title = element_text(size = 10, face = "bold"),
@@ -255,8 +255,8 @@ generate_imc_comparison <- function(duthanga_geral, duthanga_refeicao, ganho_pes
     ) +
     theme_minimal() +
     theme(
-      plot.title = element_text(size = 16, face = "bold", color = "#333"),
-      plot.subtitle = element_text(size = 12, color = "#666"),
+      plot.title = element_text(size = 16, face = "bold", color = "black"),
+      plot.subtitle = element_text(size = 12, color = "gray"),
       axis.title = element_text(size = 12, face = "bold"),
       axis.text = element_text(size = 10),
       legend.title = element_text(size = 12, face = "bold"),
