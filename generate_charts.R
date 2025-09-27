@@ -1,6 +1,22 @@
 # Script R FINAL para dashboard de praticas budistas e antropometria
 # CORRIGIDO para lidar com multiplos formatos de data
 
+cat("🚀 INICIANDO SCRIPT R - DEBUG MODE\n")
+cat("📅 Timestamp:", Sys.time(), "\n")
+
+cat("📁 Verificando diretório de trabalho...\n")
+cat("📂 Diretório atual:", getwd(), "\n")
+
+# Definir diretório correto do projeto
+project_dir <- "C:/Users/tashi.TASHI-LENOVO/APPS/R/antropometria-dashboard"
+if(file.exists(project_dir)) {
+  setwd(project_dir)
+  cat("✅ Diretório alterado para:", getwd(), "\n")
+} else {
+  cat("❌ Diretório do projeto não encontrado!\n")
+}
+
+cat("📦 Carregando bibliotecas...\n")
 library(googlesheets4)
 library(ggplot2)
 library(dplyr)
@@ -8,10 +24,32 @@ library(lubridate)
 library(jsonlite)
 library(RColorBrewer)
 library(tidyr)
+cat("✅ Bibliotecas carregadas com sucesso!\n")
 
+cat("🔐 Configurando acesso sem autenticação...\n")
 # Configurar sem autenticacao
 gs4_deauth()
+cat("✅ Autenticação desabilitada!\n")
+
 sheet_url <- "https://docs.google.com/spreadsheets/d/1nL76BTIiWiazFutiU3Unowxm4kSxjs3oNbGnpRYwRq8/edit"
+cat("🔗 URL da planilha:", sheet_url, "\n")
+
+cat("🧪 Testando acesso à planilha...\n")
+
+# Teste simples de conectividade
+tryCatch({
+  cat("🔍 Verificando se a planilha é acessível...\n")
+  test_result <- gs4_has_token()
+  cat("🔐 Token status:", test_result, "\n")
+  
+  # Teste básico de leitura
+  cat("📖 Tentando leitura básica...\n")
+  test_data <- read_sheet(sheet_url, range = "A1:A1", col_names = FALSE)
+  cat("✅ Teste de leitura bem-sucedido!\n")
+}, error = function(e) {
+  cat("❌ ERRO no acesso à planilha:", e$message, "\n")
+  cat("🚨 Motivo provável: planilha não é pública\n")
+})
 
 # Funcao MELHORADA para parser de data (multiplos formatos)
 parse_date_flexible <- function(date_input) {
@@ -86,44 +124,45 @@ parse_date_flexible <- function(date_input) {
   return(result)
 }
 
-# Funcao MELHORADA para parser de horario
+# Funcao MELHORADA para parser de horario (vetorizada)
 parse_time <- function(time_input) {
-  tryCatch({
-    # Extrair valor se for lista (mesmo problema do Google Sheets)
-    if(is.list(time_input) && length(time_input) > 0) {
-      time_input <- time_input[[1]]
-    }
-    
-    # Verificar se é vazio ou nulo
-    if(is.null(time_input) || length(time_input) == 0 || time_input == "" || is.na(time_input)) {
+  # Função para processar um valor individual
+  parse_single_time <- function(single_time) {
+    tryCatch({
+      # Verificar se é vazio ou nulo
+      if(is.null(single_time) || length(single_time) == 0 || is.na(single_time) || single_time == "") {
+        return("-")
+      }
+      
+      # Converter para string primeiro
+      time_str <- as.character(single_time)
+      
+      # Se contém ":", já está formatado
+      if(grepl(":", time_str)) {
+        return(time_str)
+      }
+      
+      # Tentar converter número decimal como 20.00 -> 20:00
+      time_decimal <- as.numeric(time_str)
+      if(is.na(time_decimal)) return("-")
+      
+      # Para formato 20.00, 20.30, etc.
+      hours <- floor(time_decimal)
+      minutes_decimal <- time_decimal - hours
+      minutes <- round(minutes_decimal * 100)
+      
+      # Verificar se valores são válidos
+      if(hours < 0 || hours > 23) return("-")
+      if(minutes < 0 || minutes > 59) return("-")
+      
+      sprintf("%02d:%02d", hours, minutes)
+    }, error = function(e) {
       return("-")
-    }
-    
-    # Converter para string primeiro
-    time_str <- as.character(time_input)
-    
-    # Se contém ":", já está formatado
-    if(grepl(":", time_str)) {
-      return(time_str)
-    }
-    
-    # Tentar converter número decimal como 20.00 -> 20:00
-    time_decimal <- as.numeric(time_str)
-    if(is.na(time_decimal)) return("-")
-    
-    # Para formato 20.00, 20.30, etc.
-    hours <- floor(time_decimal)
-    minutes_decimal <- time_decimal - hours
-    minutes <- round(minutes_decimal * 100)
-    
-    # Verificar se valores são válidos
-    if(hours < 0 || hours > 23) return("-")
-    if(minutes < 0 || minutes > 59) return("-")
-    
-    sprintf("%02d:%02d", hours, minutes)
-  }, error = function(e) {
-    return("-")
-  })
+    })
+  }
+  
+  # Aplicar a função para cada valor do vetor
+  sapply(time_input, parse_single_time, USE.NAMES = FALSE)
 }
 
 # Funcao robusta para converter dados numericos
@@ -205,13 +244,19 @@ extract_safe_numeric <- function(value_vector) {
 # Funcao para ler dados de uma secao especifica
 read_section_data <- function(start_row, section_name) {
   tryCatch({
+    cat("📍 Tentando ler seção:", section_name, "a partir da linha", start_row, "\n")
     range_spec <- paste0("A", start_row, ":G1000")
+    cat("📏 Range especificado:", range_spec, "\n")
+    cat("🔄 Fazendo leitura do Google Sheets...\n")
     data <- read_sheet(sheet_url, range = range_spec, col_names = FALSE)
+    cat("✅ Leitura bem-sucedida!\n")
     
     cat("📊 Dados brutos lidos de", section_name, ":", nrow(data), "linhas\n")
     
+    
     # Processar dados com parser flexivel
     data <- data %>%
+      rowwise() %>%
       mutate(
         data_original = ...1,
         data = parse_date_flexible(...1),
@@ -225,6 +270,7 @@ read_section_data <- function(start_row, section_name) {
         altura_m = 1.78,
         secao = section_name
       ) %>%
+      ungroup() %>%
       # Filtrar apenas registros com data e peso validos
       filter(!is.na(data) & !is.na(peso_kg)) %>%
       mutate(imc = peso_kg / (altura_m^2)) %>%
@@ -316,7 +362,7 @@ generate_measurements_by_section <- function(section_data, section_name) {
     filter(!is.na(valor) & is.finite(valor)) %>%
     mutate(
       medida = case_when(
-        medida == "braco_cm" ~ "Braco",
+        medida == "braco_cm" ~ "Braço",
         medida == "cintura_cm" ~ "Cintura", 
         medida == "quadril_cm" ~ "Quadril",
         medida == "panturrilha_cm" ~ "Panturrilha",
@@ -445,6 +491,21 @@ generate_imc_comparison <- function(duthanga_geral, duthanga_refeicao, ganho_pes
 
 # Funcao para gerar tabela HTML completa (APENAS DUTHANGA GERAL)
 generate_complete_table <- function(duthanga_geral, duthanga_refeicao, ganho_peso) {
+  # Função helper para formatar horário na tabela HTML
+  format_time_for_html <- function(time_value) {
+    if(is.na(time_value) || is.null(time_value) || time_value == "" || time_value == "-") {
+      return("-")
+    }
+    # Se já está formatado corretamente, retornar como está
+    time_str <- as.character(time_value)
+    if(grepl("^[0-9]{2}:[0-9]{2}$", time_str)) {
+      return(time_str)
+    }
+    # Aplicar parse_time se necessário
+    parsed_time <- parse_time(time_value)
+    return(ifelse(parsed_time == "-", "-", parsed_time))
+  }
+  
   all_data <- duthanga_geral %>%
     arrange(desc(data)) %>%
     mutate(
@@ -467,7 +528,7 @@ generate_complete_table <- function(duthanga_geral, duthanga_refeicao, ganho_pes
     '<th>Data</th>',
     '<th>Horario</th>',
     '<th>Peso (kg)</th>',
-    '<th>Braco (cm)</th>',
+    '<th>Braço (cm)</th>',
     '<th>Cintura (cm)</th>',
     '<th>Quadril (cm)</th>',
     '<th>Panturrilha (cm)</th>',
@@ -481,10 +542,13 @@ generate_complete_table <- function(duthanga_geral, duthanga_refeicao, ganho_pes
   for(i in 1:nrow(all_data)) {
     row <- all_data[i, ]
     
+    # Formatar horário usando a função helper
+    horario_formatado <- format_time_for_html(row$horario)
+    
     html_table <- paste0(html_table,
       '<tr>',
       '<td>', row$data_formatada, '</td>',
-      '<td>', ifelse(is.na(row$horario), '-', row$horario), '</td>',
+      '<td>', horario_formatado, '</td>',
       '<td>', sprintf("%.1f", row$peso_kg), '</td>',
       '<td>', ifelse(is.na(row$braco_cm), '-', sprintf("%.1f", row$braco_cm)), '</td>',
       '<td>', ifelse(is.na(row$cintura_cm), '-', sprintf("%.1f", row$cintura_cm)), '</td>',
@@ -528,10 +592,20 @@ generate_json_data <- function(duthanga_geral, duthanga_refeicao, ganho_peso) {
   current_weight <- as.numeric(ifelse(is.null(most_recent$peso_kg) || is.na(most_recent$peso_kg), 70, most_recent$peso_kg))
   current_imc <- as.numeric(ifelse(is.null(most_recent$imc) || is.na(most_recent$imc), 22.9, most_recent$imc))
   
+  # Adicionar medidas corporais
+  current_braco <- as.numeric(ifelse(is.null(most_recent$braco_cm) || is.na(most_recent$braco_cm), 32, most_recent$braco_cm))
+  current_cintura <- as.numeric(ifelse(is.null(most_recent$cintura_cm) || is.na(most_recent$cintura_cm), 86, most_recent$cintura_cm))
+  current_quadril <- as.numeric(ifelse(is.null(most_recent$quadril_cm) || is.na(most_recent$quadril_cm), 92, most_recent$quadril_cm))
+  current_panturrilha <- as.numeric(ifelse(is.null(most_recent$panturrilha_cm) || is.na(most_recent$panturrilha_cm), 34, most_recent$panturrilha_cm))
+  
   summary_data <- list(
     last_update = as.character(format(Sys.time(), "%Y-%m-%d %H:%M:%S")),
     current_weight = as.numeric(current_weight),
     current_imc = as.numeric(round(current_imc, 1)),
+    current_braco = as.numeric(current_braco),
+    current_cintura = as.numeric(current_cintura),
+    current_quadril = as.numeric(current_quadril),
+    current_panturrilha = as.numeric(current_panturrilha),
     goal_weight = as.numeric(73),
     progress_to_goal = as.numeric(73 - current_weight),
     sections = list(
@@ -550,13 +624,17 @@ generate_json_data <- function(duthanga_geral, duthanga_refeicao, ganho_peso) {
     )
   )
   
+  cat("💾 Salvando dados em JSON...\n")
+  cat("📁 Diretório atual:", getwd(), "\n")
   write_json(summary_data, "charts/dashboard_data.json", pretty = TRUE)
-  cat("✅ JSON gerado: charts/dashboard_data.json\n")
+  cat("✅ JSON salvo com sucesso: charts/dashboard_data.json\n")
+  cat("📄 Timestamp do arquivo:", file.info("charts/dashboard_data.json")$mtime, "\n")
   return(summary_data)
 }
 
 # Funcao principal
 main <- function() {
+  cat("🎯 ENTRANDO NA FUNÇÃO MAIN!\n")
   cat("🚀 Iniciando geracao de dashboard budista FINAL...\n")
   
   if(!dir.exists("charts")) dir.create("charts")
@@ -601,9 +679,20 @@ main <- function() {
   cat("  - Uma Refeicao:", nrow(duthanga_refeicao), "registros\n")
   cat("  - Ganho de Peso:", nrow(ganho_peso), "registros\n")
   
+  cat("🎉 SCRIPT EXECUTADO COM SUCESSO!\n")
+  cat("⏰ Finalizado em:", Sys.time(), "\n")
   return(TRUE)
 }
 
+cat("🏁 Executando função main()...\n")
+cat("🔍 Verificando se é interativo:", interactive(), "\n")
+cat("🔍 Verificando condição !interactive():", !interactive(), "\n")
+
 if(!interactive()) {
+  cat("✅ Condição atendida - chamando main()!\n")
+  main()
+} else {
+  cat("❌ Modo interativo detectado - forçando execução!\n")
   main()
 }
+cat("🏁 Script finalizado completamente!\n")

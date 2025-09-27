@@ -1,7 +1,11 @@
 {
-  "last_update": ["2025-09-27 18:18:32"],
+  "last_update": ["2025-09-27 14:43:39"],
   "current_weight": [71.4],
   "current_imc": [22.5],
+  "current_braco": [32],
+  "current_cintura": [86.5],
+  "current_quadril": [92.5],
+  "current_panturrilha": [34],
   "goal_weight": [73],
   "progress_to_goal": [1.6],
   "sections": {

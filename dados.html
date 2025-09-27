@@ -389,9 +389,27 @@
                             }
                         ],
                         language: {
-                            url: '//cdn.datatables.net/plug-ins/1.10.24/i18n/Portuguese-Brasil.json'
+                            "decimal": ",",
+                            "thousands": ".",
+                            "info": "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                            "infoEmpty": "Mostrando 0 a 0 de 0 registros",
+                            "infoFiltered": "(filtrado de _MAX_ registros no total)",
+                            "lengthMenu": "Mostrar _MENU_ registros por página",
+                            "loadingRecords": "Carregando...",
+                            "processing": "Processando...",
+                            "search": "Buscar:",
+                            "zeroRecords": "Nenhum registro encontrado",
+                            "paginate": {
+                                "first": "Primeiro",
+                                "last": "Último",
+                                "next": "Próximo",
+                                "previous": "Anterior"
+                            }
                         }
                     });
+                    
+                    // Carregar estatísticas após a tabela ser inicializada
+                    setTimeout(loadStatistics, 500);
                 }
             } catch (error) {
                 document.getElementById('table-loading').innerHTML = 
@@ -399,9 +417,101 @@
             }
         }
         
-        function loadStatistics() {
-            // Carregar estatísticas dos dados
-            // Implementar cálculos estatísticos
+        async function loadStatistics() {
+            try {
+                // Carregar dados do JSON
+                const response = await fetch('charts/dashboard_data.json');
+                const data = await response.json();
+                
+                // Extrair dados dos arrays
+                const currentWeight = Array.isArray(data.current_weight) ? data.current_weight[0] : data.current_weight;
+                const currentIMC = Array.isArray(data.current_imc) ? data.current_imc[0] : data.current_imc;
+                const totalGeral = data.sections.duthanga_geral.records[0];
+                
+                // Atualizar contadores
+                document.getElementById('total-geral').textContent = totalGeral;
+                document.getElementById('total-registros').textContent = totalGeral;
+                
+                // Calcular estatísticas dos dados da tabela se disponível
+                if (window.dataTable) {
+                    const tableData = window.dataTable.data().toArray();
+                    
+                    if (tableData.length > 0) {
+                        // Extrair pesos da tabela (coluna 2, índice 2)
+                        const pesos = tableData.map(row => parseFloat(row[2])).filter(peso => !isNaN(peso));
+                        
+                        if (pesos.length > 0) {
+                            const pesoMin = Math.min(...pesos);
+                            const pesoMax = Math.max(...pesos);
+                            const pesoMedio = pesos.reduce((a, b) => a + b, 0) / pesos.length;
+                            const pesoVariacao = pesoMax - pesoMin;
+                            
+                            // Atualizar estatísticas de peso
+                            document.getElementById('peso-min').textContent = pesoMin.toFixed(1) + ' kg';
+                            document.getElementById('peso-max').textContent = pesoMax.toFixed(1) + ' kg';
+                            document.getElementById('peso-medio').textContent = pesoMedio.toFixed(1) + ' kg';
+                            document.getElementById('peso-variacao').textContent = pesoVariacao.toFixed(1) + ' kg';
+                        }
+                        
+                        // Extrair IMCs da tabela (coluna 7, índice 7)
+                        const imcs = tableData.map(row => parseFloat(row[7])).filter(imc => !isNaN(imc));
+                        
+                        if (imcs.length > 0) {
+                            const imcMin = Math.min(...imcs);
+                            const imcMax = Math.max(...imcs);
+                            const imcMedio = imcs.reduce((a, b) => a + b, 0) / imcs.length;
+                            
+                            // Atualizar estatísticas de IMC
+                            document.getElementById('imc-min').textContent = imcMin.toFixed(1);
+                            document.getElementById('imc-max').textContent = imcMax.toFixed(1);
+                            document.getElementById('imc-medio').textContent = imcMedio.toFixed(1);
+                            
+                            // Categoria IMC atual
+                            let categoria = 'Normal';
+                            if (currentIMC < 18.5) categoria = 'Abaixo do peso';
+                            else if (currentIMC >= 25 && currentIMC < 30) categoria = 'Sobrepeso';
+                            else if (currentIMC >= 30) categoria = 'Obesidade';
+                            
+                            document.getElementById('imc-categoria').textContent = categoria;
+                        }
+                        
+                        // Timeline dos registros (coluna 0, índice 0)
+                        const datas = tableData.map(row => {
+                            const dataStr = row[0];
+                            const parts = dataStr.split('/');
+                            if (parts.length === 3) {
+                                return new Date(parts[2], parts[1] - 1, parts[0]);
+                            }
+                            return null;
+                        }).filter(data => data !== null).sort((a, b) => a - b);
+                        
+                        if (datas.length > 0) {
+                            const primeiraData = datas[0];
+                            const ultimaData = datas[datas.length - 1];
+                            const diferencaDias = Math.ceil((ultimaData - primeiraData) / (1000 * 60 * 60 * 24));
+                            
+                            document.getElementById('first-record').textContent = primeiraData.toLocaleDateString('pt-BR');
+                            document.getElementById('last-record').textContent = ultimaData.toLocaleDateString('pt-BR');
+                            document.getElementById('total-period').textContent = diferencaDias + ' dias';
+                        }
+                    }
+                } else {
+                    // Se a tabela ainda não foi carregada, usar dados básicos
+                    document.getElementById('peso-min').textContent = 'Carregando...';
+                    document.getElementById('peso-max').textContent = 'Carregando...';
+                    document.getElementById('peso-medio').textContent = 'Carregando...';
+                    document.getElementById('peso-variacao').textContent = 'Carregando...';
+                    
+                    // Tentar novamente após um tempo
+                    setTimeout(loadStatistics, 2000);
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+                // Valores padrão em caso de erro
+                document.getElementById('total-geral').textContent = '--';
+                document.getElementById('total-registros').textContent = '--';
+            }
         }
     </script>
 </body>

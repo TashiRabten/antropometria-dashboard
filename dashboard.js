@@ -123,11 +123,16 @@ function updateAnthropometryMetrics() {
     updateElement('imc-atual', currentIMC ? `${currentIMC}` : '--');
     updateElement('imc-status', getIMCStatus(currentIMC));
     
-    // Para medidas corporais, mostrar "Em breve" já que não estão no JSON atual
-    updateElement('braco-atual', 'Em breve');
-    updateElement('cintura-atual', 'Em breve');
-    updateElement('quadril-atual', 'Em breve');
-    updateElement('panturrilha-atual', 'Em breve');
+    // Medidas corporais - usar dados reais do JSON
+    const currentBraco = Array.isArray(allData.current_braco) ? allData.current_braco[0] : allData.current_braco;
+    const currentCintura = Array.isArray(allData.current_cintura) ? allData.current_cintura[0] : allData.current_cintura;
+    const currentQuadril = Array.isArray(allData.current_quadril) ? allData.current_quadril[0] : allData.current_quadril;
+    const currentPanturrilha = Array.isArray(allData.current_panturrilha) ? allData.current_panturrilha[0] : allData.current_panturrilha;
+    
+    updateElement('braco-atual', currentBraco ? `${currentBraco}` : '--');
+    updateElement('cintura-atual', currentCintura ? `${currentCintura}` : '--');
+    updateElement('quadril-atual', currentQuadril ? `${currentQuadril}` : '--');
+    updateElement('panturrilha-atual', currentPanturrilha ? `${currentPanturrilha}` : '--');
     
     // Progresso para meta
     updateGoalProgress(currentWeight, 73);
@@ -261,8 +266,9 @@ function updateNutritionalAnalysis(currentWeight, imc) {
     
     // Análise de tendência baseada no progresso atual
     if (allData && allData.progress_to_goal !== undefined) {
-        if (allData.progress_to_goal > 0) {
-            weightTrend = `Faltam ${allData.progress_to_goal.toFixed(1)}kg para atingir a meta de 73kg`;
+        const progressValue = Array.isArray(allData.progress_to_goal) ? allData.progress_to_goal[0] : allData.progress_to_goal;
+        if (progressValue > 0) {
+            weightTrend = `Faltam ${progressValue.toFixed(1)}kg para atingir a meta de 73kg`;
             generalProgress = 'Progresso positivo no ganho de peso saudável';
         } else {
             weightTrend = 'Meta de peso atingida';
@@ -351,7 +357,9 @@ function updateProgressBar(currentWeight, goalWeight) {
     
     // Atualizar width da barra e texto - centralizar
     progressIndicator.style.width = `${progressPercentage}%`;
-    progressIndicator.style.textAlign = 'center';
+    progressIndicator.style.display = 'flex';
+    progressIndicator.style.alignItems = 'center';
+    progressIndicator.style.justifyContent = 'center';
     progressIndicator.textContent = `${progressPercentage.toFixed(1)}%`;
 }
 
