@@ -102,6 +102,32 @@ safe_numeric <- function(x) {
   as.numeric(x)
 }
 
+# Funcao para extrair valores seguros de listas/objetos (vetorizada)
+extract_safe_numeric <- function(value_vector) {
+  result <- rep(NA_real_, length(value_vector))
+  
+  for(i in seq_along(value_vector)) {
+    value <- value_vector[i]
+    
+    tryCatch({
+      if(is.list(value) && length(value) > 0) {
+        value <- value[[1]]
+      }
+      
+      numeric_value <- as.numeric(value)
+      if(!is.na(numeric_value) && numeric_value > 1000000000) {
+        result[i] <- NA_real_  # Rejeitar timestamps onde deveriam estar medidas
+      } else {
+        result[i] <- numeric_value
+      }
+    }, error = function(e) {
+      result[i] <- NA_real_
+    })
+  }
+  
+  return(result)
+}
+
 
 # Funcao para ler dados de uma secao especifica
 read_section_data <- function(start_row, section_name) {
@@ -118,11 +144,11 @@ read_section_data <- function(start_row, section_name) {
         data = parse_date_flexible(...1),
         horario_original = ...2,
         horario = parse_time(...2),
-        peso_kg = safe_numeric(...3),
-        braco_cm = safe_numeric(...4),
-        cintura_cm = safe_numeric(...5),
-        quadril_cm = safe_numeric(...6),
-        panturrilha_cm = safe_numeric(...7),
+        peso_kg = extract_safe_numeric(...3),
+        braco_cm = extract_safe_numeric(...4),
+        cintura_cm = extract_safe_numeric(...5),
+        quadril_cm = extract_safe_numeric(...6),
+        panturrilha_cm = extract_safe_numeric(...7),
         altura_m = 1.78,
         secao = section_name
       ) %>%
@@ -177,9 +203,9 @@ generate_weight_comparison_chart <- function(duthanga_geral, duthanga_refeicao, 
       color = "Pratica"
     ) +
     scale_x_date(
-      date_breaks = "2 months",
+      date_breaks = "1 month",
       date_labels = "%b\n%Y",
-      expand = c(0.02, 0)
+      expand = c(0.02, 0.02)
     ) +
     theme_minimal() +
     theme(
@@ -187,7 +213,7 @@ generate_weight_comparison_chart <- function(duthanga_geral, duthanga_refeicao, 
       plot.subtitle = element_text(size = 12, color = "gray"),
       axis.title = element_text(size = 12, face = "bold"),
       axis.text = element_text(size = 10),
-      axis.text.x = element_text(angle = 0, hjust = 0.5),
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
       legend.title = element_text(size = 12, face = "bold"),
       legend.text = element_text(size = 10),
       panel.grid.minor = element_blank(),
@@ -240,19 +266,32 @@ generate_measurements_by_section <- function(section_data, section_name) {
       x = "Data",
       y = "Medida (cm)",
       color = "Regiao"
-    ) +
-    scale_x_date(
-      date_breaks = "2 months",
+    )
+  
+  # Configuração de escala de data específica por seção
+  if(section_name == "Ganho de Peso") {
+    # Para Ganho de Peso: datas completas dia a dia
+    p <- p + scale_x_date(
+      date_breaks = "2 weeks",
+      date_labels = "%d/%m\n%Y",
+      expand = c(0.02, 0.02)
+    )
+  } else {
+    # Para Duthanga: mês a mês
+    p <- p + scale_x_date(
+      date_breaks = "1 month", 
       date_labels = "%b\n%Y",
-      expand = c(0.02, 0)
-    ) +
-    theme_minimal() +
+      expand = c(0.02, 0.02)
+    )
+  }
+  
+  p <- p + theme_minimal() +
     theme(
       plot.title = element_text(size = 14, face = "bold", color = "black"),
       plot.subtitle = element_text(size = 10, color = "gray"),
       axis.title = element_text(size = 10, face = "bold"),
       axis.text = element_text(size = 9),
-      axis.text.x = element_text(angle = 0, hjust = 0.5),
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
       legend.title = element_text(size = 10, face = "bold"),
       legend.text = element_text(size = 9),
       panel.grid.minor = element_blank(),
@@ -307,9 +346,9 @@ generate_imc_comparison <- function(duthanga_geral, duthanga_refeicao, ganho_pes
       color = "Pratica"
     ) +
     scale_x_date(
-      date_breaks = "2 months",
+      date_breaks = "1 month",
       date_labels = "%b\n%Y",
-      expand = c(0.02, 0)
+      expand = c(0.02, 0.02)
     ) +
     theme_minimal() +
     theme(
@@ -317,7 +356,7 @@ generate_imc_comparison <- function(duthanga_geral, duthanga_refeicao, ganho_pes
       plot.subtitle = element_text(size = 12, color = "gray"),
       axis.title = element_text(size = 12, face = "bold"),
       axis.text = element_text(size = 10),
-      axis.text.x = element_text(angle = 0, hjust = 0.5),
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
       legend.title = element_text(size = 12, face = "bold"),
       legend.text = element_text(size = 10),
       panel.grid.minor = element_blank(),
