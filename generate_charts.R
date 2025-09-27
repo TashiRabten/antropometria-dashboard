@@ -12,11 +12,9 @@ library(tidyr)
 
 # Configurar autenticacao para GitHub Actions
 gs4_deauth()
-gs4_auth(email = "sheets-reader@antropometria-dashboard.iam.gserviceaccount.com", 
-         path = "auth_token.json")
 
 # URL da planilha Google Sheets
-sheet_url <- "https://docs.google.com/spreadsheets/d/1nL76BTIiWiazFutiU3Unowxm4kSxjs3oNbGnpRYwRq8/edit?usp=drive_web&ouid=111902732217167107299"
+sheet_url <- "https://docs.google.com/spreadsheets/d/1nL76BTIiWiazFutiU3Unowxm4kSxjs3oNbGnpRYwRq8/edit"
 
 # Funcao para parser de data (yyyy.mm.dd)
 parse_date <- function(date_string) {
@@ -394,4 +392,5 @@ main <- function() {
 if(!interactive()) {
   main()
 }
+
 
