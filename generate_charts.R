@@ -180,8 +180,15 @@ safe_numeric <- function(x) {
 }
 
 # Funcao MELHORADA para extrair valores seguros e corrigir "falsas datas"
-extract_safe_numeric <- function(value_vector) {
-  result <- rep(NA_real_, length(value_vector))
+extract_safe_numeric <- function(value_input) {
+  # Se é um único valor (para compatibilidade com rowwise), processar como vetor de 1 elemento
+  if(length(value_input) == 1) {
+    value_vector <- value_input
+    result <- rep(NA_real_, 1)
+  } else {
+    value_vector <- value_input
+    result <- rep(NA_real_, length(value_vector))
+  }
   
   for(i in seq_along(value_vector)) {
     value <- value_vector[i]
@@ -237,7 +244,12 @@ extract_safe_numeric <- function(value_vector) {
     })
   }
   
-  return(result)
+  # Se processou apenas um valor, retornar apenas esse valor
+  if(length(result) == 1) {
+    return(result[1])
+  } else {
+    return(result)
+  }
 }
 
 
