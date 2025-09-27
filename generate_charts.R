@@ -7,14 +7,8 @@ cat("📅 Timestamp:", Sys.time(), "\n")
 cat("📁 Verificando diretório de trabalho...\n")
 cat("📂 Diretório atual:", getwd(), "\n")
 
-# Definir diretório correto do projeto
-project_dir <- "C:/Users/tashi.TASHI-LENOVO/APPS/R/antropometria-dashboard"
-if(file.exists(project_dir)) {
-  setwd(project_dir)
-  cat("✅ Diretório alterado para:", getwd(), "\n")
-} else {
-  cat("❌ Diretório do projeto não encontrado!\n")
-}
+# Para compatibilidade GitHub Actions, usar diretório atual
+cat("✅ Usando diretório atual para execução\n")
 
 cat("📦 Carregando bibliotecas...\n")
 library(googlesheets4)
