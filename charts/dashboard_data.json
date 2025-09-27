@@ -1,16 +1,16 @@
 {
-  "last_update": ["2025-09-27 10:41:25"],
+  "last_update": ["2025-09-27 10:50:28"],
   "current_weight": [96.52],
   "current_imc": [30.5],
   "goal_weight": [73],
   "progress_to_goal": [-23.52],
   "sections": {
     "duthanga_geral": {
-      "records": [46],
+      "records": [47],
       "latest_date": ["2025-09-13"]
     },
     "duthanga_refeicao": {
-      "records": [16],
+      "records": [17],
       "latest_date": ["2025-09-13"]
     },
     "ganho_peso": {
