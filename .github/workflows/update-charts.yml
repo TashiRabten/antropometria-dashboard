@@ -40,16 +40,13 @@
         run: |
           echo "Charts updated at $(date)" > charts/last_update.txt
 
-      - name: Commit and push changes
+      - name: Commit and Push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add charts/
-          if ! git diff --staged --quiet; then
-            git commit -m "Atualização automática dos gráficos - $(date '+%Y-%m-%d %H:%M')"
-            git push
-          else
-            echo "Nenhuma mudança detectada nos gráficos"
-          fi
+          git diff --staged --quiet || git commit -m "Atualização automática dos gráficos - $(date '+%Y-%m-%d %H:%M')"
+          git pull --rebase origin main    # <-- Adicione esta linha
+          git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
