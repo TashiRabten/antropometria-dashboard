@@ -46,25 +46,24 @@ read_section_data <- function(start_row, section_name) {
     data <- read_sheet(sheet_url, range = range_spec, col_names = FALSE)
     
     colnames(data) <- c("data", "horario", "peso_kg", "braco_cm", "cintura_cm", "quadril_cm", "panturrilha_cm")
-    
-    data <- data %>%
-      filter(!is.na(data) & !is.na(peso_kg) & data != "" & peso_kg != "") %>%
-      mutate(
-        data_original = data,
-        data = parse_date(data),
-        horario_original = horario,
-        horario = parse_time(as.numeric(horario)),
-        peso_kg = as.numeric(peso_kg),
-        braco_cm = as.numeric(braco_cm),
-        cintura_cm = as.numeric(cintura_cm),
-        quadril_cm = as.numeric(quadril_cm),
-        panturrilha_cm = as.numeric(panturrilha_cm),
-        altura_m = 1.78,
-        imc = peso_kg / (altura_m^2),
-        secao = section_name
-      ) %>%
-      filter(!is.na(data)) %>%
-      arrange(data)
+
+     data <- data %>%
+        filter(!is.na(...1)) %>%  # Usar nome da coluna atual
+        mutate(
+          data = parse_date(...1),
+          horario = as.character(...2),
+          peso_kg = as.numeric(as.character(...3)),
+          braco_cm = as.numeric(as.character(...4)),
+          cintura_cm = as.numeric(ifelse(is.list(...5), sapply(...5, function(x) as.character(x[1])), as.character(...5))),
+          quadril_cm = as.numeric(as.character(...6)),
+          panturrilha_cm = as.numeric(ifelse(is.list(...7), sapply(...7, function(x) as.character(x[1])), as.character(...7))),
+          altura_m = 1.78,
+          imc = peso_kg / (altura_m^2),
+          secao = section_name
+        ) %>%
+        select(data, horario, peso_kg, braco_cm, cintura_cm, quadril_cm, panturrilha_cm, altura_m, imc, secao) %>%
+        filter(!is.na(data) & !is.na(peso_kg)) %>%
+        arrange(data)
     
     cat("Secao", section_name, ":", nrow(data), "registros validos\n")
     return(data)
@@ -392,6 +391,7 @@ main <- function() {
 if(!interactive()) {
   main()
 }
+
 
 
 
