@@ -181,6 +181,11 @@ safe_numeric <- function(x) {
 
 # Funcao MELHORADA para extrair valores seguros e corrigir "falsas datas"
 extract_safe_numeric <- function(value_input) {
+  # CORREÇÃO: Tratar caso especial de length == 0 (NULL/vazio)
+  if(length(value_input) == 0) {
+    return(NA_real_)
+  }
+  
   # Se é um único valor (para compatibilidade com rowwise), processar como vetor de 1 elemento
   if(length(value_input) == 1) {
     value_vector <- value_input
