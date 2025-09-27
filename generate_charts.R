@@ -42,7 +42,7 @@ parse_time <- function(time_input) {
 # Funcao para ler dados de uma secao especifica
 read_section_data <- function(start_row, section_name) {
   tryCatch({
-    range_spec <- paste0("A", start_row, ":G")
+    range_spec <- paste0("A", start_row, ":G1000")
     data <- read_sheet(sheet_url, range = range_spec, col_names = FALSE)
     
     colnames(data) <- c("data", "horario", "peso_kg", "braco_cm", "cintura_cm", "quadril_cm", "panturrilha_cm")
@@ -392,5 +392,6 @@ main <- function() {
 if(!interactive()) {
   main()
 }
+
 
 
