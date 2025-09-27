@@ -259,7 +259,7 @@ generate_weight_comparison_chart <- function(duthanga_geral, duthanga_refeicao, 
     scale_x_date(
       date_breaks = "1 month",
       date_labels = "%b\n%Y",
-      expand = c(0.02, 0.02)
+      expand = c(0.05, 0.05)
     ) +
     theme_minimal() +
     theme(
@@ -327,14 +327,14 @@ generate_measurements_by_section <- function(section_data, section_name) {
     p <- p + scale_x_date(
       date_breaks = "2 weeks",
       date_labels = "%d/%m\n%Y",
-      expand = c(0.02, 0.02)
+      expand = c(0.08, 0.08)
     )
   } else {
     # Para Duthanga: mês a mês
     p <- p + scale_x_date(
       date_breaks = "1 month", 
       date_labels = "%b\n%Y",
-      expand = c(0.02, 0.02)
+      expand = c(0.05, 0.05)
     )
   }
   
@@ -400,7 +400,7 @@ generate_imc_comparison <- function(duthanga_geral, duthanga_refeicao, ganho_pes
     scale_x_date(
       date_breaks = "1 month",
       date_labels = "%b\n%Y",
-      expand = c(0.02, 0.02)
+      expand = c(0.05, 0.05)
     ) +
     theme_minimal() +
     theme(

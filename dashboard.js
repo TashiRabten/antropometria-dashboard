@@ -80,11 +80,11 @@ function getCurrentPage() {
 function updateDashboardMetrics() {
     if (!allData) return;
     
-    // Usar dados diretos do JSON gerado pelo R
-    const currentWeight = allData.current_weight || 0;
-    const currentIMC = allData.current_imc || 0;
-    const goalWeight = allData.goal_weight || 73;
-    const progressToGoal = allData.progress_to_goal || 0;
+    // Usar dados diretos do JSON gerado pelo R - corrigir arrays
+    const currentWeight = Array.isArray(allData.current_weight) ? allData.current_weight[0] : allData.current_weight || 0;
+    const currentIMC = Array.isArray(allData.current_imc) ? allData.current_imc[0] : allData.current_imc || 0;
+    const goalWeight = Array.isArray(allData.goal_weight) ? allData.goal_weight[0] : allData.goal_weight || 73;
+    const progressToGoal = Array.isArray(allData.progress_to_goal) ? allData.progress_to_goal[0] : allData.progress_to_goal || 0;
     
     // Peso atual (só o número, pois "kg" já está no HTML)
     updateElement('current-weight', currentWeight ? `${currentWeight}` : '--');
@@ -115,8 +115,8 @@ function updateDashboardMetrics() {
 function updateAnthropometryMetrics() {
     if (!allData) return;
     
-    const currentWeight = allData.current_weight;
-    const currentIMC = allData.current_imc;
+    const currentWeight = Array.isArray(allData.current_weight) ? allData.current_weight[0] : allData.current_weight;
+    const currentIMC = Array.isArray(allData.current_imc) ? allData.current_imc[0] : allData.current_imc;
     
     // Métricas atuais - usar dados disponíveis do JSON
     updateElement('peso-atual', currentWeight ? `${currentWeight}` : '--');
@@ -164,15 +164,13 @@ function updateDuthangaMetrics() {
 function updateDataPageMetrics() {
     if (!allData) return;
     
-    // Contadores totais
-    const geralCount = allData['Duthanga Geral'] ? allData['Duthanga Geral'].length : 0;
-    const refeicaoCount = allData['Duthanga Uma Refeicao'] ? allData['Duthanga Uma Refeicao'].length : 0;
-    const pesoCount = allData['Ganho de Peso'] ? allData['Ganho de Peso'].length : 0;
-    const totalCount = geralCount + refeicaoCount + pesoCount;
+    // Usar dados das seções disponíveis
+    const geralCount = allData.sections?.duthanga_geral?.records ? 
+        (Array.isArray(allData.sections.duthanga_geral.records) ? allData.sections.duthanga_geral.records[0] : allData.sections.duthanga_geral.records) : 0;
+    
+    const totalCount = geralCount;
     
     updateElement('total-geral', geralCount);
-    updateElement('total-refeicao', refeicaoCount);
-    updateElement('total-peso', pesoCount);
     updateElement('total-registros', totalCount);
     
     // Estatísticas de peso
