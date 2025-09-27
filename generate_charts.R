@@ -45,8 +45,6 @@ read_section_data <- function(start_row, section_name) {
     range_spec <- paste0("A", start_row, ":G1000")
     data <- read_sheet(sheet_url, range = range_spec, col_names = FALSE)
     
-    colnames(data) <- c("data", "horario", "peso_kg", "braco_cm", "cintura_cm", "quadril_cm", "panturrilha_cm")
-
      data <- data %>%
         filter(!is.na(...1)) %>%  # Usar nome da coluna atual
         mutate(
@@ -391,6 +389,7 @@ main <- function() {
 if(!interactive()) {
   main()
 }
+
 
 
 
