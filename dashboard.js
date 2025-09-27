@@ -98,14 +98,9 @@ function updateDashboardMetrics() {
     // Progresso para meta (kg restantes)
     updateElement('progress-to-goal', progressToGoal > 0 ? `${progressToGoal.toFixed(1)}` : '0');
     
-    // Total de registros - corrigir arrays
+    // Total de registros - usar apenas duthanga_geral (48)
     const geralRecords = allData.sections?.duthanga_geral?.records || 0;
-    const refeicaoRecords = allData.sections?.duthanga_refeicao?.records || 0;
-    const pesoRecords = allData.sections?.ganho_peso?.records || 0;
-    
-    const totalRecords = (Array.isArray(geralRecords) ? geralRecords[0] : geralRecords) + 
-                        (Array.isArray(refeicaoRecords) ? refeicaoRecords[0] : refeicaoRecords) + 
-                        (Array.isArray(pesoRecords) ? pesoRecords[0] : pesoRecords);
+    const totalRecords = Array.isArray(geralRecords) ? geralRecords[0] : geralRecords;
     updateElement('total-records', totalRecords.toString());
     
     // Atualizar barra de progresso
@@ -118,17 +113,10 @@ function updateDashboardMetrics() {
 
 // Atualizar métricas da página de antropometria
 function updateAnthropometryMetrics() {
-    if (!allData) {
-        console.log('No allData available for antropometry');
-        return;
-    }
-    
-    console.log('Updating antropometry metrics with data:', allData);
+    if (!allData) return;
     
     const currentWeight = Array.isArray(allData.current_weight) ? allData.current_weight[0] : allData.current_weight;
     const currentIMC = Array.isArray(allData.current_imc) ? allData.current_imc[0] : allData.current_imc;
-    
-    console.log('Extracted values - Weight:', currentWeight, 'IMC:', currentIMC);
     
     // Métricas atuais - usar dados disponíveis do JSON
     updateElement('peso-atual', currentWeight ? `${currentWeight}` : '--');
@@ -226,7 +214,7 @@ function updateElement(id, content, callback = null) {
 function updateGoalProgress(currentWeight, targetWeight) {
     if (!currentWeight) return;
     
-    const startWeight = 67; // Peso inicial baseado nos dados históricos
+    const startWeight = 70; // Peso inicial conforme indicado
     const totalToGain = targetWeight - startWeight;
     const alreadyGained = currentWeight - startWeight;
     const progress = Math.min(100, Math.max(0, (alreadyGained / totalToGain) * 100));
@@ -355,14 +343,15 @@ function updateProgressBar(currentWeight, goalWeight) {
     const progressIndicator = document.getElementById('progress-indicator');
     if (!progressIndicator || !currentWeight || !goalWeight) return;
     
-    // Assumindo peso inicial de 96kg baseado nos dados
-    const initialWeight = 96;
-    const totalToLose = initialWeight - goalWeight;
-    const alreadyLost = initialWeight - currentWeight;
-    const progressPercentage = Math.min(100, Math.max(0, (alreadyLost / totalToLose) * 100));
+    // Corrigir para ganho de peso: peso inicial baixo -> meta mais alta
+    const initialWeight = 70; // Peso inicial conforme indicado
+    const totalToGain = goalWeight - initialWeight;
+    const alreadyGained = currentWeight - initialWeight;
+    const progressPercentage = Math.min(100, Math.max(0, (alreadyGained / totalToGain) * 100));
     
-    // Atualizar width da barra e texto
+    // Atualizar width da barra e texto - centralizar
     progressIndicator.style.width = `${progressPercentage}%`;
+    progressIndicator.style.textAlign = 'center';
     progressIndicator.textContent = `${progressPercentage.toFixed(1)}%`;
 }
 

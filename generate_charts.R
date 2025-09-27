@@ -94,16 +94,35 @@ parse_time <- function(time_input) {
       time_input <- time_input[[1]]
     }
     
-    time_decimal <- as.numeric(as.character(time_input))
-    if(is.na(time_decimal)) return("-")  # Retorna "-" em vez de NA para mostrar na tabela
+    # Verificar se é vazio ou nulo
+    if(is.null(time_input) || length(time_input) == 0 || time_input == "" || is.na(time_input)) {
+      return("-")
+    }
     
+    # Converter para string primeiro
+    time_str <- as.character(time_input)
+    
+    # Se contém ":", já está formatado
+    if(grepl(":", time_str)) {
+      return(time_str)
+    }
+    
+    # Tentar converter número decimal como 20.00 -> 20:00
+    time_decimal <- as.numeric(time_str)
+    if(is.na(time_decimal)) return("-")
+    
+    # Para formato 20.00, 20.30, etc.
     hours <- floor(time_decimal)
-    minutes <- round((time_decimal - hours) * 100)
+    minutes_decimal <- time_decimal - hours
+    minutes <- round(minutes_decimal * 100)
+    
+    # Verificar se valores são válidos
     if(hours < 0 || hours > 23) return("-")
     if(minutes < 0 || minutes > 59) return("-")
+    
     sprintf("%02d:%02d", hours, minutes)
   }, error = function(e) {
-    return("-")  # Retorna "-" em vez de NA
+    return("-")
   })
 }
 
