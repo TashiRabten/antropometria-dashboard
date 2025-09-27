@@ -1,0 +1,648 @@
+/* Dashboard Budista - CSS Personalizado */
+
+:root {
+    --primary-color: #667eea;
+    --secondary-color: #764ba2;
+    --accent-color: #f093fb;
+    --success-color: #4CAF50;
+    --warning-color: #ff9800;
+    --info-color: #2196F3;
+    --danger-color: #f44336;
+    --light-color: #f5f7fa;
+    --dark-color: #2c3e50;
+    --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    --gradient-accent: linear-gradient(135deg, var(--accent-color) 0%, var(--primary-color) 100%);
+    --shadow-light: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-medium: 0 8px 32px rgba(0, 0, 0, 0.1);
+    --shadow-heavy: 0 12px 40px rgba(0, 0, 0, 0.15);
+    --border-radius: 15px;
+    --transition: all 0.3s ease;
+}
+
+/* Reset e Base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, var(--light-color) 0%, #c3cfe2 100%);
+    min-height: 100vh;
+    color: var(--dark-color);
+    line-height: 1.6;
+}
+
+/* Navegação */
+.navbar {
+    background: var(--gradient-primary) !important;
+    box-shadow: var(--shadow-light);
+    transition: var(--transition);
+}
+
+.navbar-brand {
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.dharma-wheel {
+    display: inline-block;
+    animation: rotate 20s linear infinite;
+    margin-right: 8px;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.nav-link {
+    font-weight: 500;
+    transition: var(--transition);
+    border-radius: 8px;
+    margin: 0 2px;
+}
+
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.nav-link.active {
+    background: rgba(255, 255, 255, 0.2);
+    font-weight: 600;
+}
+
+/* Cards Principais */
+.hero-card {
+    background: var(--gradient-primary);
+    color: white;
+    border-radius: var(--border-radius);
+    padding: 3rem 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-medium);
+    text-align: center;
+}
+
+.hero-card h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.progress-card {
+    background: var(--gradient-primary);
+    color: white;
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-medium);
+}
+
+.metric-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-medium);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    transition: var(--transition);
+    text-align: center;
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-heavy);
+}
+
+.metric-card-small {
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow-light);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.metric-card-small:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+}
+
+.metric-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.chart-container {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-medium);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    transition: var(--transition);
+}
+
+.chart-container:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-heavy);
+}
+
+/* Páginas Específicas */
+.page-header {
+    background: var(--gradient-accent);
+    color: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.about-header {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 3rem 2rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+/* Cards Especializados */
+.quick-link-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-medium);
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+}
+
+.quick-link-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-heavy);
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.quick-link-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.practice-info-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-medium);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.practice-header {
+    padding: 1rem 1.5rem;
+    color: white;
+    font-weight: 600;
+}
+
+.practice-header.duthanga-geral {
+    background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+}
+
+.practice-header.duthanga-refeicao {
+    background: linear-gradient(135deg, #4ECDC4, #44A08D);
+}
+
+.practice-body {
+    padding: 1.5rem;
+}
+
+.metrics-summary {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.metric {
+    background: var(--light-color);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+/* Progresso e Indicadores */
+.goal-progress {
+    background: linear-gradient(90deg, var(--success-color) 0%, #81C784 100%);
+    height: 35px;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    margin: 15px 0;
+}
+
+.goal-indicator {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--success-color);
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 14px;
+    box-shadow: var(--shadow-light);
+}
+
+.progress-bar-large {
+    background: rgba(255, 255, 255, 0.2);
+    height: 40px;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-fill {
+    background: var(--success-color);
+    height: 100%;
+    border-radius: 20px;
+    transition: width 0.5s ease;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: 600;
+}
+
+.goal-circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: var(--gradient-primary);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin: 0 auto;
+}
+
+/* Badges e Status */
+.practice-badge {
+    padding: 8px 16px;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: inline-block;
+}
+
+.badge-duthanga-geral {
+    background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+    color: white;
+}
+
+.badge-duthanga-refeicao {
+    background: linear-gradient(135deg, #4ECDC4, #44A08D);
+    color: white;
+}
+
+.badge-ganho-peso {
+    background: linear-gradient(135deg, #45B7D1, #96C93D);
+    color: white;
+}
+
+.tech-badge {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    margin: 2px;
+    display: inline-block;
+}
+
+/* Tabelas */
+.table-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-medium);
+}
+
+.table-responsive {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.table th {
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    font-weight: 600;
+}
+
+.table td {
+    vertical-align: middle;
+    border-color: #dee2e6;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.05);
+}
+
+/* Citações Zen */
+.zen-quote {
+    font-style: italic;
+    color: #666;
+    text-align: center;
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    border-left: 4px solid var(--accent-color);
+}
+
+.zen-quote-large {
+    font-style: italic;
+    color: var(--dark-color);
+    text-align: center;
+    margin: 2rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: var(--border-radius);
+    border-left: 6px solid var(--accent-color);
+    font-size: 1.1rem;
+    line-height: 1.8;
+}
+
+/* Cards Especiais */
+.about-card, .team-card, .practices-card, .tech-card, 
+.features-card, .gratitude-card, .technical-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-medium);
+}
+
+.professional-card {
+    text-align: center;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    margin: 1rem 0;
+}
+
+.professional-avatar {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.practice-detail {
+    background: var(--light-color);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin: 1rem 0;
+}
+
+/* Estatísticas */
+.stats-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-light);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: var(--transition);
+}
+
+.stats-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-medium);
+}
+
+.stats-icon {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+}
+
+.stats-content h4 {
+    margin: 0;
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+.stats-content p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Filtros e Ações */
+.filters-card, .actions-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-light);
+    margin-bottom: 1rem;
+}
+
+.filters-card h5, .actions-card h6 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+/* Cards de Análise */
+.analysis-card, .recommendations-card, .reference-card,
+.summary-card, .timeline-card, .insights-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-light);
+    margin-bottom: 1rem;
+}
+
+.analysis-item, .recommendation-item, .timeline-item {
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid #eee;
+}
+
+.analysis-item:last-child,
+.recommendation-item:last-child,
+.timeline-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.current-status {
+    text-align: center;
+}
+
+.status-box {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-top: 1rem;
+}
+
+.status-value {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.status-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* Listas */
+.insights-list, .features-list {
+    list-style: none;
+    padding: 0;
+}
+
+.insights-list li, .features-list li {
+    padding: 0.5rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.insights-list li:before, .features-list li:before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--success-color);
+    font-weight: bold;
+}
+
+/* Goal Card */
+.goal-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    box-shadow: var(--shadow-medium);
+    margin-bottom: 2rem;
+}
+
+.goal-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Footer */
+.footer {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 2rem 0;
+    margin-top: 3rem;
+}
+
+.footer .zen-quote {
+    background: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .hero-card h1 {
+        font-size: 2rem;
+    }
+    
+    .metric-card {
+        margin-bottom: 1rem;
+    }
+    
+    .quick-link-icon {
+        font-size: 2rem;
+    }
+    
+    .goal-circle {
+        width: 80px;
+        height: 80px;
+        font-size: 1rem;
+    }
+    
+    .stats-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .metrics-summary {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .container {
+        padding: 0 1rem;
+    }
+    
+    .hero-card, .progress-card, .chart-container {
+        padding: 1.5rem 1rem;
+    }
+    
+    .page-header, .about-header {
+        padding: 1.5rem 1rem;
+    }
+    
+    .zen-quote-large {
+        padding: 1.5rem 1rem;
+        font-size: 1rem;
+    }
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.metric-card, .chart-container, .quick-link-card {
+    animation: fadeIn 0.6s ease-out;
+}
+
+/* Loading States */
+.table-loading {
+    padding: 3rem;
+}
+
+.spinner-border {
+    width: 2rem;
+    height: 2rem;
+}
+
+/* Utilitários */
+.text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.shadow-custom {
+    box-shadow: var(--shadow-medium);
+}
+
+.border-gradient {
+    border: 2px solid;
+    border-image: var(--gradient-primary) 1;
+}
+
+/* Dark mode suporte futuro */
+@media (prefers-color-scheme: dark) {
+    /* Implementação futura para modo escuro */
+}

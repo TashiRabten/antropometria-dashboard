@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dados Completos - Dashboard Budista</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <span class="dharma-wheel">☸</span> Dashboard Budista
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">🏠 Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="duthanga.html">🏮 Práticas Duthanga</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="antropometria.html">📊 Antropometria</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="dados.html">📋 Dados Completos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="sobre.html">ℹ️ Sobre</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Cabeçalho -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="page-header">
+                    <h1>📋 Histórico Completo de Dados</h1>
+                    <p class="lead">Todos os registros de práticas Duthanga e medições antropométricas</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estatísticas Rápidas -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">🏮</div>
+                    <div class="stats-content">
+                        <h4 id="total-geral">0</h4>
+                        <p>Duthanga Geral</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">🍽️</div>
+                    <div class="stats-content">
+                        <h4 id="total-refeicao">0</h4>
+                        <p>Uma Refeição</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">⚖️</div>
+                    <div class="stats-content">
+                        <h4 id="total-peso">0</h4>
+                        <p>Ganho de Peso</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">📊</div>
+                    <div class="stats-content">
+                        <h4 id="total-registros">0</h4>
+                        <p>Total de Registros</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros e Controles -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="filters-card">
+                    <h5>🔍 Filtros e Configurações</h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="practice-filter" class="form-label">Prática</label>
+                            <select class="form-select" id="practice-filter">
+                                <option value="">Todas as práticas</option>
+                                <option value="Duthanga Geral">Duthanga Geral</option>
+                                <option value="Duthanga Uma Refeicao">Uma Refeição</option>
+                                <option value="Ganho de Peso">Ganho de Peso</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="date-from" class="form-label">Data Inicial</label>
+                            <input type="date" class="form-control" id="date-from">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="date-to" class="form-label">Data Final</label>
+                            <input type="date" class="form-control" id="date-to">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button class="btn btn-primary me-2" onclick="applyFilters()">Aplicar Filtros</button>
+                            <button class="btn btn-outline-secondary" onclick="clearFilters()">Limpar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ações Rápidas -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="actions-card">
+                    <h6>⚡ Ações Rápidas</h6>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-primary" onclick="exportData('csv')">
+                            📊 Exportar CSV
+                        </button>
+                        <button type="button" class="btn btn-outline-success" onclick="exportData('excel')">
+                            📈 Exportar Excel
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="printTable()">
+                            🖨️ Imprimir
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" onclick="refreshData()">
+                            🔄 Atualizar Dados
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela Principal -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="table-card">
+                    <h5>📋 Tabela Completa de Dados</h5>
+                    <div class="table-loading text-center py-4" id="table-loading">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2">Carregando dados da planilha...</p>
+                    </div>
+                    <div id="complete-table-container" style="display: none;">
+                        <!-- Tabela será carregada aqui -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumo Estatístico -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="summary-card">
+                    <h5>📈 Resumo Estatístico - Peso</h5>
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td><strong>Peso Mínimo:</strong></td>
+                                <td id="peso-min">--</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Peso Máximo:</strong></td>
+                                <td id="peso-max">--</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Peso Médio:</strong></td>
+                                <td id="peso-medio">--</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Variação Total:</strong></td>
+                                <td id="peso-variacao">--</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="summary-card">
+                    <h5>📏 Resumo Estatístico - IMC</h5>
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td><strong>IMC Mínimo:</strong></td>
+                                <td id="imc-min">--</td>
+                            </tr>
+                            <tr>
+                                <td><strong>IMC Máximo:</strong></td>
+                                <td id="imc-max">--</td>
+                            </tr>
+                            <tr>
+                                <td><strong>IMC Médio:</strong></td>
+                                <td id="imc-medio">--</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Categoria Atual:</strong></td>
+                                <td id="imc-categoria">--</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline dos Registros -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="timeline-card">
+                    <h5>⏰ Timeline dos Registros</h5>
+                    <div class="timeline-info">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="timeline-item">
+                                    <strong>Primeiro Registro:</strong>
+                                    <span id="first-record">--/--/----</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="timeline-item">
+                                    <strong>Último Registro:</strong>
+                                    <span id="last-record">--/--/----</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="timeline-item">
+                                    <strong>Período Total:</strong>
+                                    <span id="total-period">-- dias</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navegação -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <a href="antropometria.html" class="btn btn-outline-primary">
+                    ← Antropometria
+                </a>
+            </div>
+            <div class="col-md-6 text-end">
+                <a href="sobre.html" class="btn btn-primary">
+                    Sobre o Projeto →
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer mt-5">
+        <div class="container">
+            <div class="zen-quote text-center">
+                "Nos dados encontramos sabedoria, na sabedoria encontramos o caminho"
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.csv.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.excel.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
+    <script src="dashboard.js"></script>
+    <script>
+        // Funções específicas da página de dados
+        function applyFilters() {
+            // Implementar filtros da tabela
+            const practice = document.getElementById('practice-filter').value;
+            const dateFrom = document.getElementById('date-from').value;
+            const dateTo = document.getElementById('date-to').value;
+            
+            // Aplicar filtros no DataTable
+            if (window.dataTable) {
+                window.dataTable.columns(8).search(practice).draw();
+            }
+        }
+        
+        function clearFilters() {
+            document.getElementById('practice-filter').value = '';
+            document.getElementById('date-from').value = '';
+            document.getElementById('date-to').value = '';
+            
+            if (window.dataTable) {
+                window.dataTable.search('').columns().search('').draw();
+            }
+        }
+        
+        function exportData(format) {
+            if (window.dataTable) {
+                if (format === 'csv') {
+                    window.dataTable.button('.buttons-csv').trigger();
+                } else if (format === 'excel') {
+                    window.dataTable.button('.buttons-excel').trigger();
+                }
+            }
+        }
+        
+        function printTable() {
+            if (window.dataTable) {
+                window.dataTable.button('.buttons-print').trigger();
+            }
+        }
+        
+        function refreshData() {
+            location.reload();
+        }
+        
+        // Carregar dados específicos da página
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCompleteTable();
+            loadStatistics();
+        });
+        
+        async function loadCompleteTable() {
+            try {
+                const response = await fetch('charts/complete_table.html');
+                const tableHtml = await response.text();
+                
+                document.getElementById('table-loading').style.display = 'none';
+                document.getElementById('complete-table-container').style.display = 'block';
+                document.getElementById('complete-table-container').innerHTML = tableHtml;
+                
+                // Inicializar DataTable com recursos avançados
+                if (jQuery('#complete-data-table').length) {
+                    window.dataTable = jQuery('#complete-data-table').DataTable({
+                        dom: 'Bfrtip',
+                        buttons: ['csv', 'excel', 'print'],
+                        pageLength: 25,
+                        order: [[0, 'desc']],
+                        language: {
+                            url: '//cdn.datatables.net/plug-ins/1.10.24/i18n/Portuguese-Brasil.json'
+                        }
+                    });
+                }
+            } catch (error) {
+                document.getElementById('table-loading').innerHTML = 
+                    '<p class="text-muted">Dados serão carregados na próxima atualização.</p>';
+            }
+        }
+        
+        function loadStatistics() {
+            // Carregar estatísticas dos dados
+            // Implementar cálculos estatísticos
+        }
+    </script>
+</body>
+</html>

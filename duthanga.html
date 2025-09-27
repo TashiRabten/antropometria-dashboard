@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Práticas Duthanga - Dashboard Budista</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <span class="dharma-wheel">☸</span> Dashboard Budista
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">🏠 Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="duthanga.html">🏮 Práticas Duthanga</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="antropometria.html">📊 Antropometria</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="dados.html">📋 Dados Completos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="sobre.html">ℹ️ Sobre</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Cabeçalho da Página -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="page-header">
+                    <h1>🏮 Práticas Duthanga</h1>
+                    <p class="lead">Acompanhamento das práticas ascéticas budistas e seus efeitos na composição corporal</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Explicação das Práticas -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="practice-info-card">
+                    <div class="practice-header duthanga-geral">
+                        <h4>🏮 Duthanga Geral</h4>
+                    </div>
+                    <div class="practice-body">
+                        <p><strong>Definição:</strong> Conjunto completo de práticas ascéticas budistas que incluem moderação alimentar, simplicidade no vestir e outras austeridades voluntárias.</p>
+                        <p><strong>Objetivo:</strong> Desenvolvimento espiritual através da disciplina física e mental.</p>
+                        <p><strong>Período:</strong> Prática contínua com registros desde o início do acompanhamento.</p>
+                        <div class="metrics-summary">
+                            <span class="metric">Registros: <strong id="geral-records">0</strong></span>
+                            <span class="metric">Última medição: <strong id="geral-last">--/--/----</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="practice-info-card">
+                    <div class="practice-header duthanga-refeicao">
+                        <h4>🍽️ Duthanga Uma Refeição</h4>
+                    </div>
+                    <div class="practice-body">
+                        <p><strong>Definição:</strong> Prática específica de consumir apenas uma refeição por dia, tradicionalmente antes do meio-dia.</p>
+                        <p><strong>Objetivo:</strong> Disciplina mental e física através da restrição alimentar consciente.</p>
+                        <p><strong>Período:</strong> Períodos específicos de prática intensiva.</p>
+                        <div class="metrics-summary">
+                            <span class="metric">Registros: <strong id="refeicao-records">0</strong></span>
+                            <span class="metric">Última medição: <strong id="refeicao-last">--/--/----</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos Comparativos -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="chart-container">
+                    <h4>📊 Comparação de Peso entre Práticas</h4>
+                    <p class="text-muted">Evolução do peso corporal durante diferentes práticas Duthanga</p>
+                    <img src="charts/weight_comparison.png" alt="Comparação de Peso" class="img-fluid">
+                </div>
+            </div>
+        </div>
+
+        <!-- Medidas Corporais por Prática -->
+        <div class="row">
+            <div class="col-md-12">
+                <h3 class="text-center mb-4">📏 Medidas Corporais por Prática</h3>
+                
+                <!-- Navegação entre práticas -->
+                <ul class="nav nav-pills justify-content-center mb-4" id="practiceTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="geral-tab" data-bs-toggle="pill" data-bs-target="#geral-measurements" type="button" role="tab">
+                            Duthanga Geral
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="refeicao-tab" data-bs-toggle="pill" data-bs-target="#refeicao-measurements" type="button" role="tab">
+                            Uma Refeição
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Conteúdo das medidas -->
+                <div class="tab-content" id="practiceTabContent">
+                    <div class="tab-pane fade show active" id="geral-measurements" role="tabpanel">
+                        <div class="chart-container">
+                            <h5>📏 Duthanga Geral - Evolução das Medidas</h5>
+                            <img src="charts/measurements_duthanga_geral.png" alt="Medidas Duthanga Geral" class="img-fluid">
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="refeicao-measurements" role="tabpanel">
+                        <div class="chart-container">
+                            <h5>🍽️ Uma Refeição - Evolução das Medidas</h5>
+                            <img src="charts/measurements_duthanga_uma_refeicao.png" alt="Medidas Uma Refeição" class="img-fluid">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Insights e Reflexões -->
+        <div class="row mt-5">
+            <div class="col-md-12">
+                <div class="insights-card">
+                    <h4>💡 Insights das Práticas</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>🎯 Observações Gerais</h6>
+                            <ul class="insights-list">
+                                <li>As práticas Duthanga promovem disciplina tanto mental quanto física</li>
+                                <li>A restrição alimentar consciente pode influenciar a composição corporal</li>
+                                <li>O acompanhamento permite ajustes equilibrados entre espiritualidade e saúde</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>🧘‍♂️ Benefícios Observados</h6>
+                            <ul class="insights-list">
+                                <li>Maior consciência corporal e alimentar</li>
+                                <li>Desenvolvimento da autodisciplina</li>
+                                <li>Equilíbrio entre práticas espirituais e cuidado físico</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navegação -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <a href="index.html" class="btn btn-outline-primary">
+                    ← Voltar ao Dashboard
+                </a>
+            </div>
+            <div class="col-md-6 text-end">
+                <a href="antropometria.html" class="btn btn-primary">
+                    Antropometria →
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer mt-5">
+        <div class="container">
+            <div class="zen-quote text-center">
+                "Através da disciplina, encontramos a liberdade"
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>
