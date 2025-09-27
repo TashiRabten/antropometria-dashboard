@@ -1,21 +1,21 @@
 {
-  "last_update": ["2025-09-27 17:53:35"],
-  "current_weight": [69.4],
-  "current_imc": [21.9],
+  "last_update": ["2025-09-27 18:18:32"],
+  "current_weight": [71.4],
+  "current_imc": [22.5],
   "goal_weight": [73],
-  "progress_to_goal": [3.6],
+  "progress_to_goal": [1.6],
   "sections": {
     "duthanga_geral": {
-      "records": [47],
-      "latest_date": ["2025-09-13"]
+      "records": [48],
+      "latest_date": ["2025-09-27"]
     },
     "duthanga_refeicao": {
-      "records": [17],
-      "latest_date": ["2025-09-13"]
+      "records": [18],
+      "latest_date": ["2025-09-27"]
     },
     "ganho_peso": {
-      "records": [2],
-      "latest_date": ["2025-09-13"]
+      "records": [3],
+      "latest_date": ["2025-09-27"]
     }
   }
 }
