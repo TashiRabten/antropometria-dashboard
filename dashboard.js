@@ -89,10 +89,10 @@ function updatePageMetrics() {
 // Identificar página atual
 function getCurrentPage() {
     const path = window.location.pathname;
-    if (path.includes('antropometria')) return 'antropometria';
-    if (path.includes('duthanga')) return 'duthanga';
-    if (path.includes('dados')) return 'dados';
-    if (path.includes('sobre')) return 'sobre';
+    if (path.includes('antropometria.html')) return 'antropometria';
+    if (path.includes('duthanga.html')) return 'duthanga';
+    if (path.includes('dados.html')) return 'dados';
+    if (path.includes('sobre.html')) return 'sobre';
     return 'index';
 }
 
