@@ -98,25 +98,37 @@ function updateDashboardMetrics() {
     // Progresso para meta (kg restantes)
     updateElement('progress-to-goal', progressToGoal > 0 ? `${progressToGoal.toFixed(1)}` : '0');
     
-    // Total de registros
-    const totalRecords = (allData.sections?.duthanga_geral?.records || 0) + 
-                        (allData.sections?.duthanga_refeicao?.records || 0) + 
-                        (allData.sections?.ganho_peso?.records || 0);
+    // Total de registros - corrigir arrays
+    const geralRecords = allData.sections?.duthanga_geral?.records || 0;
+    const refeicaoRecords = allData.sections?.duthanga_refeicao?.records || 0;
+    const pesoRecords = allData.sections?.ganho_peso?.records || 0;
+    
+    const totalRecords = (Array.isArray(geralRecords) ? geralRecords[0] : geralRecords) + 
+                        (Array.isArray(refeicaoRecords) ? refeicaoRecords[0] : refeicaoRecords) + 
+                        (Array.isArray(pesoRecords) ? pesoRecords[0] : pesoRecords);
     updateElement('total-records', totalRecords.toString());
     
     // Atualizar barra de progresso
     updateProgressBar(currentWeight, goalWeight);
     
-    // Atualizar timestamp
-    updateElement('last-update', allData.last_update || 'Não disponível');
+    // Atualizar timestamp - corrigir array
+    const lastUpdate = Array.isArray(allData.last_update) ? allData.last_update[0] : allData.last_update;
+    updateElement('last-update', lastUpdate || 'Não disponível');
 }
 
 // Atualizar métricas da página de antropometria
 function updateAnthropometryMetrics() {
-    if (!allData) return;
+    if (!allData) {
+        console.log('No allData available for antropometry');
+        return;
+    }
+    
+    console.log('Updating antropometry metrics with data:', allData);
     
     const currentWeight = Array.isArray(allData.current_weight) ? allData.current_weight[0] : allData.current_weight;
     const currentIMC = Array.isArray(allData.current_imc) ? allData.current_imc[0] : allData.current_imc;
+    
+    console.log('Extracted values - Weight:', currentWeight, 'IMC:', currentIMC);
     
     // Métricas atuais - usar dados disponíveis do JSON
     updateElement('peso-atual', currentWeight ? `${currentWeight}` : '--');
@@ -164,14 +176,12 @@ function updateDuthangaMetrics() {
 function updateDataPageMetrics() {
     if (!allData) return;
     
-    // Usar dados das seções disponíveis
-    const geralCount = allData.sections?.duthanga_geral?.records ? 
-        (Array.isArray(allData.sections.duthanga_geral.records) ? allData.sections.duthanga_geral.records[0] : allData.sections.duthanga_geral.records) : 0;
-    
-    const totalCount = geralCount;
+    // Usar dados das seções disponíveis - corrigir arrays
+    const geralRecords = allData.sections?.duthanga_geral?.records || 0;
+    const geralCount = Array.isArray(geralRecords) ? geralRecords[0] : geralRecords;
     
     updateElement('total-geral', geralCount);
-    updateElement('total-registros', totalCount);
+    updateElement('total-registros', geralCount);
     
     // Estatísticas de peso
     calculateWeightStatistics();
@@ -330,17 +340,6 @@ function calculateTimeline() {
     }
 }
 
-// Função auxiliar para atualizar elementos
-function updateElement(id, content, customUpdate = null) {
-    const element = document.getElementById(id);
-    if (element) {
-        if (customUpdate) {
-            customUpdate(element);
-        } else {
-            element.textContent = content;
-        }
-    }
-}
 
 // Função para calcular categoria do IMC
 function getIMCCategory(imc) {
@@ -367,17 +366,6 @@ function updateProgressBar(currentWeight, goalWeight) {
     progressIndicator.textContent = `${progressPercentage.toFixed(1)}%`;
 }
 
-// Função auxiliar duplicada removida - usando a versão principal acima
-function updateElement(id, content, customUpdate = null) {
-    const element = document.getElementById(id);
-    if (element) {
-        if (customUpdate) {
-            customUpdate(element);
-        } else {
-            element.textContent = content;
-        }
-    }
-}
 
 // Formatar data
 function formatDate(date) {
