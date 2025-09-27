@@ -14,18 +14,38 @@ document.addEventListener('DOMContentLoaded', function() {
 // Carregar dados do JSON gerado pelo R
 async function loadDashboardData() {
     try {
+        console.log('🔍 DEBUG: Iniciando carregamento dos dados...');
+        console.log('🔍 DEBUG: URL base:', window.location.href);
+        console.log('🔍 DEBUG: Tentando carregar:', 'charts/dashboard_data.json');
+        
         const response = await fetch('charts/dashboard_data.json');
+        console.log('🔍 DEBUG: Response status:', response.status);
+        console.log('🔍 DEBUG: Response ok:', response.ok);
+        console.log('🔍 DEBUG: Response headers:', response.headers);
+        
         if (!response.ok) {
+            console.log('🔍 DEBUG: Response não ok, lançando erro');
             throw new Error('Dados não encontrados. Serão carregados na próxima atualização.');
         }
         
+        console.log('🔍 DEBUG: Tentando fazer parse do JSON...');
         allData = await response.json();
-        latestData = getLatestMeasurements();
+        console.log('🔍 DEBUG: Dados carregados com sucesso:', allData);
         
+        console.log('🔍 DEBUG: Obtendo latest data...');
+        latestData = getLatestMeasurements();
+        console.log('🔍 DEBUG: Latest data:', latestData);
+        
+        console.log('🔍 DEBUG: Chamando updatePageMetrics...');
         // Atualizar todas as métricas na página atual
         updatePageMetrics();
+        console.log('🔍 DEBUG: updatePageMetrics concluído');
         
     } catch (error) {
+        console.log('🔍 DEBUG: Erro capturado:', error);
+        console.log('🔍 DEBUG: Tipo do erro:', error.name);
+        console.log('🔍 DEBUG: Mensagem do erro:', error.message);
+        console.log('🔍 DEBUG: Stack do erro:', error.stack);
         console.log('Dados ainda não disponíveis:', error.message);
         showDataPlaceholders();
     }
@@ -78,13 +98,26 @@ function getCurrentPage() {
 
 // Atualizar métricas da página principal
 function updateDashboardMetrics() {
-    if (!allData) return;
+    console.log('🔍 DEBUG: updateDashboardMetrics iniciado');
+    console.log('🔍 DEBUG: allData existe:', !!allData);
+    if (!allData) {
+        console.log('🔍 DEBUG: allData é null/undefined, saindo');
+        return;
+    }
+    
+    console.log('🔍 DEBUG: allData completo:', allData);
     
     // Usar dados diretos do JSON gerado pelo R - corrigir arrays
     const currentWeight = Array.isArray(allData.current_weight) ? allData.current_weight[0] : allData.current_weight || 0;
     const currentIMC = Array.isArray(allData.current_imc) ? allData.current_imc[0] : allData.current_imc || 0;
     const goalWeight = Array.isArray(allData.goal_weight) ? allData.goal_weight[0] : allData.goal_weight || 73;
     const progressToGoal = Array.isArray(allData.progress_to_goal) ? allData.progress_to_goal[0] : allData.progress_to_goal || 0;
+    
+    console.log('🔍 DEBUG: Valores extraídos:');
+    console.log('🔍 DEBUG: currentWeight:', currentWeight);
+    console.log('🔍 DEBUG: currentIMC:', currentIMC);
+    console.log('🔍 DEBUG: goalWeight:', goalWeight);
+    console.log('🔍 DEBUG: progressToGoal:', progressToGoal);
     
     // Peso atual (só o número, pois "kg" já está no HTML)
     updateElement('current-weight', currentWeight ? `${currentWeight}` : '--');
@@ -205,13 +238,20 @@ function getIMCCategory(imc) {
 
 // Função utilitária para atualizar elementos DOM
 function updateElement(id, content, callback = null) {
+    console.log(`🔍 DEBUG: updateElement chamado para ${id} com conteúdo:`, content);
     const element = document.getElementById(id);
+    console.log(`🔍 DEBUG: Elemento ${id} encontrado:`, !!element);
     if (element) {
         if (callback) {
+            console.log(`🔍 DEBUG: Executando callback para ${id}`);
             callback(element);
         } else {
+            console.log(`🔍 DEBUG: Atualizando textContent de ${id} para:`, content);
             element.textContent = content;
         }
+        console.log(`🔍 DEBUG: ${id} atualizado com sucesso`);
+    } else {
+        console.log(`🔍 DEBUG: ERRO - Elemento ${id} não encontrado no DOM!`);
     }
 }
 
