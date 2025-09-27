@@ -11,7 +11,7 @@ library(RColorBrewer)
 
 # Configurar autenticação do Google Sheets
 # Para uso em GitHub Actions, usar service account
-gs4_auth(token = "auth_token.json")
+gs4_auth(path = "auth_token.json")
 
 # URL da planilha Google Sheets
 sheet_url <- "https://docs.google.com/spreadsheets/d/1nL76BTIiWiazFutiU3Unowxm4kSxjs3oNbGnpRYwRq8/edit?usp=drive_web&ouid=111902732217167107299"
@@ -229,3 +229,4 @@ if(!interactive()) {
   main()
 
 }
+
