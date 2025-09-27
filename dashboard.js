@@ -95,29 +95,37 @@ function getCurrentPage() {
 
 // Atualizar métricas da página principal
 function updateDashboardMetrics() {
-    if (!latestData || !latestData.global) return;
+    if (!allData) return;
     
-    const latest = latestData.global;
+    // Usar dados diretos do JSON gerado pelo R
+    const currentWeight = allData.current_weight || 0;
+    const currentIMC = allData.current_imc || 0;
+    const goalWeight = allData.goal_weight || 73;
+    const progressToGoal = allData.progress_to_goal || 0;
     
-    // Peso atual
-    updateElement('peso-atual', latest.Weight ? `${latest.Weight} kg` : '--');
+    // Peso atual (só o número, pois "kg" já está no HTML)
+    updateElement('current-weight', currentWeight ? `${currentWeight}` : '--');
     
-    // IMC
-    const imc = calculateIMC(latest.Weight, 1.74); // Altura fixa - ajustar conforme necessário
-    updateElement('imc-atual', imc ? imc.toFixed(1) : '--');
-    updateElement('imc-status', getIMCStatus(imc));
+    // IMC atual
+    updateElement('current-imc', currentIMC ? `${currentIMC}` : '--');
     
-    // Medidas corporais
-    updateElement('braco-atual', latest.Arm ? `${latest.Arm} cm` : '--');
-    updateElement('cintura-atual', latest.Waist ? `${latest.Waist} cm` : '--');
-    updateElement('quadril-atual', latest.Hip ? `${latest.Hip} cm` : '--');
-    updateElement('panturrilha-atual', latest.Calf ? `${latest.Calf} cm` : '--');
+    // Categoria do IMC
+    updateElement('imc-category', getIMCCategory(currentIMC));
     
-    // Progresso para meta de 73kg
-    updateGoalProgress(latest.Weight, 73);
+    // Progresso para meta (kg restantes)
+    updateElement('progress-to-goal', progressToGoal > 0 ? `${progressToGoal.toFixed(1)}` : '0');
     
-    // Estatísticas por prática
-    updatePracticeStats();
+    // Total de registros
+    const totalRecords = (allData.sections?.duthanga_geral?.records || 0) + 
+                        (allData.sections?.duthanga_refeicao?.records || 0) + 
+                        (allData.sections?.ganho_peso?.records || 0);
+    updateElement('total-records', totalRecords.toString());
+    
+    // Atualizar barra de progresso
+    updateProgressBar(currentWeight, goalWeight);
+    
+    // Atualizar timestamp
+    updateElement('last-update', allData.last_update || 'Não disponível');
 }
 
 // Atualizar métricas da página de antropometria
@@ -341,6 +349,31 @@ function updateElement(id, content, customUpdate = null) {
             element.textContent = content;
         }
     }
+}
+
+// Função para calcular categoria do IMC
+function getIMCCategory(imc) {
+    if (!imc || imc <= 0) return 'Não disponível';
+    if (imc < 18.5) return 'Abaixo do peso';
+    if (imc < 25) return 'Peso normal';
+    if (imc < 30) return 'Sobrepeso';
+    return 'Obesidade';
+}
+
+// Função para atualizar barra de progresso
+function updateProgressBar(currentWeight, goalWeight) {
+    const progressIndicator = document.getElementById('progress-indicator');
+    if (!progressIndicator || !currentWeight || !goalWeight) return;
+    
+    // Assumindo peso inicial de 96kg baseado nos dados
+    const initialWeight = 96;
+    const totalToLose = initialWeight - goalWeight;
+    const alreadyLost = initialWeight - currentWeight;
+    const progressPercentage = Math.min(100, Math.max(0, (alreadyLost / totalToLose) * 100));
+    
+    // Atualizar width da barra e texto
+    progressIndicator.style.width = `${progressPercentage}%`;
+    progressIndicator.textContent = `${progressPercentage.toFixed(1)}%`;
 }
 
 // Formatar data
