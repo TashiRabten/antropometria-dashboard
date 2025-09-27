@@ -113,31 +113,31 @@ function updateDashboardMetrics() {
 
 // Atualizar métricas da página de antropometria
 function updateAnthropometryMetrics() {
-    if (!latestData || !latestData.global) return;
+    if (!allData) return;
     
-    const latest = latestData.global;
+    const currentWeight = allData.current_weight;
+    const currentIMC = allData.current_imc;
     
-    // Métricas atuais
-    updateElement('peso-atual', latest.Weight || '--');
+    // Métricas atuais - usar dados disponíveis do JSON
+    updateElement('peso-atual', currentWeight ? `${currentWeight}` : '--');
+    updateElement('imc-atual', currentIMC ? `${currentIMC}` : '--');
+    updateElement('imc-status', getIMCStatus(currentIMC));
     
-    const imc = calculateIMC(latest.Weight, 1.74);
-    updateElement('imc-atual', imc ? imc.toFixed(1) : '--');
-    updateElement('imc-status', getIMCStatus(imc));
-    
-    updateElement('braco-atual', latest.Arm || '--');
-    updateElement('cintura-atual', latest.Waist || '--');
-    updateElement('quadril-atual', latest.Hip || '--');
-    updateElement('panturrilha-atual', latest.Calf || '--');
+    // Para medidas corporais, mostrar "Em breve" já que não estão no JSON atual
+    updateElement('braco-atual', 'Em breve');
+    updateElement('cintura-atual', 'Em breve');
+    updateElement('quadril-atual', 'Em breve');
+    updateElement('panturrilha-atual', 'Em breve');
     
     // Progresso para meta
-    updateGoalProgress(latest.Weight, 73);
+    updateGoalProgress(currentWeight, 73);
     
     // Análise nutricional
-    updateNutritionalAnalysis(latest, imc);
+    updateNutritionalAnalysis(currentWeight, currentIMC);
     
     // Status IMC atual
-    updateElement('status-imc-value', imc ? imc.toFixed(1) : '--');
-    updateElement('status-imc-label', getIMCStatus(imc));
+    updateElement('status-imc-value', currentIMC ? `${currentIMC}` : '--');
+    updateElement('status-imc-label', getIMCStatus(currentIMC));
 }
 
 // Atualizar métricas da página Duthanga
@@ -197,16 +197,35 @@ function getIMCStatus(imc) {
     return 'Obesidade';
 }
 
+// Alias para compatibilidade
+function getIMCCategory(imc) {
+    return getIMCStatus(imc);
+}
+
+// Função utilitária para atualizar elementos DOM
+function updateElement(id, content, callback = null) {
+    const element = document.getElementById(id);
+    if (element) {
+        if (callback) {
+            callback(element);
+        } else {
+            element.textContent = content;
+        }
+    }
+}
+
 // Atualizar progresso para meta
 function updateGoalProgress(currentWeight, targetWeight) {
     if (!currentWeight) return;
     
-    const startWeight = 70; // Peso inicial estimado
-    const progress = ((currentWeight - startWeight) / (targetWeight - startWeight)) * 100;
+    const startWeight = 67; // Peso inicial baseado nos dados históricos
+    const totalToGain = targetWeight - startWeight;
+    const alreadyGained = currentWeight - startWeight;
+    const progress = Math.min(100, Math.max(0, (alreadyGained / totalToGain) * 100));
     const remaining = Math.max(0, targetWeight - currentWeight);
     
     updateElement('goal-progress-bar', '', (el) => {
-        el.style.width = Math.min(100, Math.max(0, progress)) + '%';
+        el.style.width = progress + '%';
     });
     
     updateElement('goal-progress-text', `${progress.toFixed(1)}%`);
@@ -229,7 +248,7 @@ function updatePracticeStats() {
 }
 
 // Análise nutricional
-function updateNutritionalAnalysis(latest, imc) {
+function updateNutritionalAnalysis(currentWeight, imc) {
     let imcAnalysis = 'Dados insuficientes';
     let weightTrend = 'Analisando tendência...';
     let generalProgress = 'Acompanhamento em progresso';
@@ -241,6 +260,17 @@ function updateNutritionalAnalysis(latest, imc) {
             imcAnalysis = 'Peso dentro da faixa normal - manter acompanhamento';
         } else {
             imcAnalysis = 'Acima do peso ideal - avaliar estratégias nutricionais';
+        }
+    }
+    
+    // Análise de tendência baseada no progresso atual
+    if (allData && allData.progress_to_goal !== undefined) {
+        if (allData.progress_to_goal > 0) {
+            weightTrend = `Faltam ${allData.progress_to_goal.toFixed(1)}kg para atingir a meta de 73kg`;
+            generalProgress = 'Progresso positivo no ganho de peso saudável';
+        } else {
+            weightTrend = 'Meta de peso atingida';
+            generalProgress = 'Objetivo alcançado - manter peso atual';
         }
     }
     
@@ -337,6 +367,18 @@ function updateProgressBar(currentWeight, goalWeight) {
     // Atualizar width da barra e texto
     progressIndicator.style.width = `${progressPercentage}%`;
     progressIndicator.textContent = `${progressPercentage.toFixed(1)}%`;
+}
+
+// Função auxiliar duplicada removida - usando a versão principal acima
+function updateElement(id, content, customUpdate = null) {
+    const element = document.getElementById(id);
+    if (element) {
+        if (customUpdate) {
+            customUpdate(element);
+        } else {
+            element.textContent = content;
+        }
+    }
 }
 
 // Formatar data
