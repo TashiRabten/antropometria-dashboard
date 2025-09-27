@@ -102,24 +102,6 @@ safe_numeric <- function(x) {
   as.numeric(x)
 }
 
-# Funcao para extrair valores seguros de listas/objetos (rejeita timestamps suspeitos)
-extract_safe_numeric <- function(value) {
-  tryCatch({
-    if(is.list(value) && length(value) > 0) {
-      value <- value[[1]]
-    }
-    
-    # Se o valor for muito grande, provavelmente é timestamp onde não deveria estar
-    numeric_value <- as.numeric(value)
-    if(!is.na(numeric_value) && numeric_value > 1000000000) {
-      return(NA)  # Rejeitar timestamps onde deveriam estar medidas
-    }
-    
-    return(numeric_value)
-  }, error = function(e) {
-    return(NA)
-  })
-}
 
 # Funcao para ler dados de uma secao especifica
 read_section_data <- function(start_row, section_name) {
@@ -136,11 +118,11 @@ read_section_data <- function(start_row, section_name) {
         data = parse_date_flexible(...1),
         horario_original = ...2,
         horario = parse_time(...2),
-        peso_kg = extract_safe_numeric(...3),
-        braco_cm = extract_safe_numeric(...4),
-        cintura_cm = extract_safe_numeric(...5),
-        quadril_cm = extract_safe_numeric(...6),
-        panturrilha_cm = extract_safe_numeric(...7),
+        peso_kg = safe_numeric(...3),
+        braco_cm = safe_numeric(...4),
+        cintura_cm = safe_numeric(...5),
+        quadril_cm = safe_numeric(...6),
+        panturrilha_cm = safe_numeric(...7),
         altura_m = 1.78,
         secao = section_name
       ) %>%
