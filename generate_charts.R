@@ -27,12 +27,23 @@ parse_date_flexible <- function(date_input) {
   for(i in seq_along(date_input)) {
     value <- date_input[i]
     
-    if(is.na(value) || value == "" || is.null(value)) {
+    if(is.null(value) || (length(value) == 1 && is.na(value))) {
+      result[i] <- as.Date(NA)
+      next
+    }
+    
+    # Verificar se é string vazia apenas se for character
+    if(is.character(value) && value == "") {
       result[i] <- as.Date(NA)
       next
     }
     
     tryCatch({
+      # Extrair valor se for lista
+      if(is.list(value) && length(value) > 0) {
+        value <- value[[1]]
+      }
+      
       # Formato 1: Timestamp Unix (numero grande)
       if(is.numeric(value) || grepl("^[0-9]{10}$", as.character(value))) {
         timestamp <- as.numeric(value)
@@ -48,7 +59,7 @@ parse_date_flexible <- function(date_input) {
       }
       # Formato 4: objeto POSIXct
       else if(inherits(value, "POSIXct")) {
-        result[i] <- as.Date(value)
+        result[i] <- as.Date(format(value, "%Y-%m-%d"))
       }
       # Formato 5: tentar conversao direta
       else {
