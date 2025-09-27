@@ -42,11 +42,14 @@
 
       - name: Commit and push changes
         run: |
-            if ! git diff --staged --quiet; then
-              git commit -m "Atualização automática dos gráficos - $(date '+%Y-%m-%d %H:%M')"
-              git push
-            else
-              echo "Nenhuma mudança detectada nos gráficos"
-            fi
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add charts/
+          if ! git diff --staged --quiet; then
+            git commit -m "Atualização automática dos gráficos - $(date '+%Y-%m-%d %H:%M')"
+            git push
+          else
+            echo "Nenhuma mudança detectada nos gráficos"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
