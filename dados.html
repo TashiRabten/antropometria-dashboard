@@ -98,13 +98,8 @@
                     <h5>🔍 Filtros e Configurações</h5>
                     <div class="row">
                         <div class="col-md-3">
-                            <label for="practice-filter" class="form-label">Prática</label>
-                            <select class="form-select" id="practice-filter">
-                                <option value="">Todas as práticas</option>
-                                <option value="Duthanga Geral">Duthanga Geral</option>
-                                <option value="Duthanga Uma Refeicao">Uma Refeição</option>
-                                <option value="Ganho de Peso">Ganho de Peso</option>
-                            </select>
+                            <label class="form-label">Prática</label>
+                            <input type="text" class="form-control" value="Duthanga Geral (Todos os dados)" readonly disabled>
                         </div>
                         <div class="col-md-3">
                             <label for="date-from" class="form-label">Data Inicial</label>
@@ -285,40 +280,67 @@
     <script>
         // Funções específicas da página de dados
         function applyFilters() {
-            // Implementar filtros da tabela
-            const practice = document.getElementById('practice-filter').value;
             const dateFrom = document.getElementById('date-from').value;
             const dateTo = document.getElementById('date-to').value;
             
-            // Aplicar filtros no DataTable
             if (window.dataTable) {
-                window.dataTable.columns(8).search(practice).draw();
+                // Limpar filtros anteriores
+                $.fn.dataTable.ext.search.pop();
+                
+                // Filtro personalizado por data (formato brasileiro dd/mm/yyyy)
+                if (dateFrom || dateTo) {
+                    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                        const dateStr = data[0]; // Coluna de data
+                        
+                        // Converter data brasileira dd/mm/yyyy para objeto Date
+                        const parts = dateStr.split('/');
+                        if (parts.length !== 3) return true;
+                        
+                        const rowDate = new Date(parts[2], parts[1] - 1, parts[0]); // yyyy, mm-1, dd
+                        
+                        // Verificar filtros
+                        if (dateFrom) {
+                            const fromDate = new Date(dateFrom);
+                            if (rowDate < fromDate) return false;
+                        }
+                        
+                        if (dateTo) {
+                            const toDate = new Date(dateTo);
+                            if (rowDate > toDate) return false;
+                        }
+                        
+                        return true;
+                    });
+                }
+                
+                window.dataTable.draw();
             }
         }
         
         function clearFilters() {
-            document.getElementById('practice-filter').value = '';
             document.getElementById('date-from').value = '';
             document.getElementById('date-to').value = '';
             
             if (window.dataTable) {
-                window.dataTable.search('').columns().search('').draw();
+                // Limpar filtros customizados
+                $.fn.dataTable.ext.search.pop();
+                window.dataTable.draw();
             }
         }
         
         function exportData(format) {
             if (window.dataTable) {
                 if (format === 'csv') {
-                    window.dataTable.button('.buttons-csv').trigger();
+                    window.dataTable.button(0).trigger(); // Primeiro botão (CSV)
                 } else if (format === 'excel') {
-                    window.dataTable.button('.buttons-excel').trigger();
+                    window.dataTable.button(1).trigger(); // Segundo botão (Excel)
                 }
             }
         }
         
         function printTable() {
             if (window.dataTable) {
-                window.dataTable.button('.buttons-print').trigger();
+                window.dataTable.button(2).trigger(); // Terceiro botão (Print)
             }
         }
         
@@ -345,7 +367,23 @@
                 if (jQuery('#complete-data-table').length) {
                     window.dataTable = jQuery('#complete-data-table').DataTable({
                         dom: 'Bfrtip',
-                        buttons: ['csv', 'excel', 'print'],
+                        buttons: [
+                            {
+                                extend: 'csvHtml5',
+                                text: '📄 CSV',
+                                className: 'btn btn-success btn-sm'
+                            },
+                            {
+                                extend: 'excelHtml5', 
+                                text: '📊 Excel',
+                                className: 'btn btn-primary btn-sm'
+                            },
+                            {
+                                extend: 'print',
+                                text: '🖨️ Imprimir',
+                                className: 'btn btn-secondary btn-sm'
+                            }
+                        ],
                         pageLength: 25,
                         order: [[0, 'desc']],
                         columnDefs: [

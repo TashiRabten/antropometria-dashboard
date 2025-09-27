@@ -424,7 +424,7 @@ generate_imc_comparison <- function(duthanga_geral, duthanga_refeicao, ganho_pes
   return(p)
 }
 
-# Funcao para gerar tabela HTML completa (SOMENTE DUTHANGA GERAL)
+# Funcao para gerar tabela HTML completa (APENAS DUTHANGA GERAL)
 generate_complete_table <- function(duthanga_geral, duthanga_refeicao, ganho_peso) {
   all_data <- duthanga_geral %>%
     arrange(desc(data)) %>%

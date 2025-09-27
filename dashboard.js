@@ -31,36 +31,19 @@ async function loadDashboardData() {
     }
 }
 
-// Obter últimas medições de cada prática
+// Obter últimas medições - ADAPTADO para nova estrutura JSON
 function getLatestMeasurements() {
     if (!allData) return null;
     
-    const latest = {};
-    
-    // Encontrar última medição de cada prática
-    ['Duthanga Geral', 'Duthanga Uma Refeicao', 'Ganho de Peso'].forEach(practice => {
-        if (allData[practice] && allData[practice].length > 0) {
-            const practiceData = allData[practice];
-            latest[practice] = practiceData[practiceData.length - 1];
-        }
-    });
-    
-    // Determinar valores mais recentes globalmente
-    const allEntries = [];
-    Object.values(allData).forEach(practiceData => {
-        if (Array.isArray(practiceData)) {
-            allEntries.push(...practiceData);
-        }
-    });
-    
-    // Ordenar por data
-    allEntries.sort((a, b) => new Date(a.Date) - new Date(b.Date));
-    
-    if (allEntries.length > 0) {
-        latest.global = allEntries[allEntries.length - 1];
-    }
-    
-    return latest;
+    // Usar dados diretos do JSON gerado pelo R
+    return {
+        global: {
+            Weight: allData.current_weight,
+            IMC: allData.current_imc,
+            Date: allData.last_update
+        },
+        sections: allData.sections
+    };
 }
 
 // Atualizar métricas baseado na página atual
@@ -266,47 +249,27 @@ function updateNutritionalAnalysis(latest, imc) {
     updateElement('general-progress', generalProgress);
 }
 
-// Calcular estatísticas de peso
+// Calcular estatísticas de peso - SIMPLIFICADO para nova estrutura
 function calculateWeightStatistics() {
     if (!allData) return;
     
-    const allWeights = [];
-    const allIMCs = [];
+    // Usar valores diretos do JSON
+    const currentWeight = allData.current_weight;
+    const currentIMC = allData.current_imc;
     
-    Object.values(allData).forEach(practiceData => {
-        if (Array.isArray(practiceData)) {
-            practiceData.forEach(entry => {
-                if (entry.Weight) {
-                    allWeights.push(entry.Weight);
-                    const imc = calculateIMC(entry.Weight, 1.74);
-                    if (imc) allIMCs.push(imc);
-                }
-            });
+    if (currentWeight && currentIMC) {
+        // Mostrar valores atuais como estatísticas
+        updateElement('peso-atual-stat', `${currentWeight} kg`);
+        updateElement('imc-atual-stat', `${currentIMC}`);
+        updateElement('categoria-imc-stat', getIMCCategory(currentIMC));
+        
+        // Informações das seções
+        if (allData.sections) {
+            const totalRecords = (allData.sections.duthanga_geral?.records || 0) + 
+                               (allData.sections.duthanga_refeicao?.records || 0) + 
+                               (allData.sections.ganho_peso?.records || 0);
+            updateElement('total-records-stat', totalRecords);
         }
-    });
-    
-    if (allWeights.length > 0) {
-        const minWeight = Math.min(...allWeights);
-        const maxWeight = Math.max(...allWeights);
-        const avgWeight = allWeights.reduce((a, b) => a + b, 0) / allWeights.length;
-        const variation = maxWeight - minWeight;
-        
-        updateElement('peso-min', `${minWeight} kg`);
-        updateElement('peso-max', `${maxWeight} kg`);
-        updateElement('peso-medio', `${avgWeight.toFixed(1)} kg`);
-        updateElement('peso-variacao', `${variation.toFixed(1)} kg`);
-    }
-    
-    if (allIMCs.length > 0) {
-        const minIMC = Math.min(...allIMCs);
-        const maxIMC = Math.max(...allIMCs);
-        const avgIMC = allIMCs.reduce((a, b) => a + b, 0) / allIMCs.length;
-        const latestIMC = allIMCs[allIMCs.length - 1];
-        
-        updateElement('imc-min', minIMC.toFixed(1));
-        updateElement('imc-max', maxIMC.toFixed(1));
-        updateElement('imc-medio', avgIMC.toFixed(1));
-        updateElement('imc-categoria', getIMCStatus(latestIMC));
     }
 }
 
