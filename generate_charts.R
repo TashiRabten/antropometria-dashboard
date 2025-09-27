@@ -61,7 +61,7 @@ read_section_data <- function(start_row, section_name) {
         cintura_cm = as.numeric(cintura_cm),
         quadril_cm = as.numeric(quadril_cm),
         panturrilha_cm = as.numeric(panturrilha_cm),
-        altura_m = 1.75,
+        altura_m = 1.78,
         imc = peso_kg / (altura_m^2),
         secao = section_name
       ) %>%
@@ -394,3 +394,4 @@ main <- function() {
 if(!interactive()) {
   main()
 }
+
