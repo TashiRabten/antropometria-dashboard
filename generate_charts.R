@@ -1,7 +1,6 @@
-# Script R completo para dashboard de praticas budistas e antropometria
-# Conecta com Google Sheets e gera visualizacoes para 3 secoes
+# Script R FINAL para dashboard de praticas budistas e antropometria
+# CORRIGIDO para lidar com multiplos formatos de data
 
-# Carregar bibliotecas necessarias
 library(googlesheets4)
 library(ggplot2)
 library(dplyr)
@@ -10,22 +9,60 @@ library(jsonlite)
 library(RColorBrewer)
 library(tidyr)
 
-# Configurar autenticacao para GitHub Actions
+# Configurar sem autenticacao
 gs4_deauth()
-
-# URL da planilha Google Sheets
 sheet_url <- "https://docs.google.com/spreadsheets/d/1nL76BTIiWiazFutiU3Unowxm4kSxjs3oNbGnpRYwRq8/edit"
 
-# Funcao para parser de data (yyyy.mm.dd)
-parse_date <- function(date_string) {
-  tryCatch({
-    as.Date(gsub("\\.", "-", as.character(date_string)))
-  }, error = function(e) {
-    return(as.Date(NA))
-  })
+# Funcao MELHORADA para parser de data (multiplos formatos)
+parse_date_flexible <- function(date_input) {
+  if(is.list(date_input)) {
+    date_input <- sapply(date_input, function(x) {
+      if(is.null(x) || length(x) == 0) return(NA)
+      as.character(x[1])
+    })
+  }
+  
+  result <- rep(as.Date(NA), length(date_input))
+  
+  for(i in seq_along(date_input)) {
+    value <- date_input[i]
+    
+    if(is.na(value) || value == "" || is.null(value)) {
+      result[i] <- as.Date(NA)
+      next
+    }
+    
+    tryCatch({
+      # Formato 1: Timestamp Unix (numero grande)
+      if(is.numeric(value) || grepl("^[0-9]{10}$", as.character(value))) {
+        timestamp <- as.numeric(value)
+        result[i] <- as.Date(as.POSIXct(timestamp, origin = "1970-01-01"))
+      }
+      # Formato 2: yyyy.mm.dd
+      else if(grepl("^[0-9]{4}\\.[0-9]{1,2}\\.[0-9]{1,2}$", as.character(value))) {
+        result[i] <- as.Date(gsub("\\.", "-", as.character(value)))
+      }
+      # Formato 3: yyyy-mm-dd (ja formatado)
+      else if(grepl("^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}$", as.character(value))) {
+        result[i] <- as.Date(as.character(value))
+      }
+      # Formato 4: objeto POSIXct
+      else if(inherits(value, "POSIXct")) {
+        result[i] <- as.Date(value)
+      }
+      # Formato 5: tentar conversao direta
+      else {
+        result[i] <- as.Date(as.character(value))
+      }
+    }, error = function(e) {
+      result[i] <- as.Date(NA)
+    })
+  }
+  
+  return(result)
 }
 
-# Funcao para parser de horario (hh.mm ou h.mm)
+# Funcao para parser de horario
 parse_time <- function(time_input) {
   tryCatch({
     time_decimal <- as.numeric(as.character(time_input))
@@ -60,20 +97,13 @@ read_section_data <- function(start_row, section_name) {
     range_spec <- paste0("A", start_row, ":G1000")
     data <- read_sheet(sheet_url, range = range_spec, col_names = FALSE)
     
-    # Filtrar linhas vazias primeiro
-    data <- data %>%
-      filter(!is.na(...1))
+    cat("📊 Dados brutos lidos de", section_name, ":", nrow(data), "linhas\n")
     
-    if(nrow(data) == 0) {
-      cat("Secao", section_name, ": 0 registros validos\n")
-      return(data.frame())
-    }
-    
-    # Processar e limpar dados
+    # Processar dados com parser flexivel
     data <- data %>%
       mutate(
         data_original = ...1,
-        data = parse_date(...1),
+        data = parse_date_flexible(...1),
         horario_original = ...2,
         horario = parse_time(...2),
         peso_kg = safe_numeric(...3),
@@ -82,24 +112,24 @@ read_section_data <- function(start_row, section_name) {
         quadril_cm = safe_numeric(...6),
         panturrilha_cm = safe_numeric(...7),
         altura_m = 1.78,
-        imc = peso_kg / (altura_m^2),
         secao = section_name
       ) %>%
-      select(data, horario, peso_kg, braco_cm, cintura_cm, quadril_cm, panturrilha_cm, altura_m, imc, secao) %>%
+      # Filtrar apenas registros com data e peso validos
       filter(!is.na(data) & !is.na(peso_kg)) %>%
+      mutate(imc = peso_kg / (altura_m^2)) %>%
+      select(data, horario, peso_kg, braco_cm, cintura_cm, quadril_cm, panturrilha_cm, altura_m, imc, secao) %>%
       arrange(data)
     
-    cat("Secao", section_name, ":", nrow(data), "registros validos\n")
+    cat("✅ Secao", section_name, ":", nrow(data), "registros validos processados\n")
     return(data)
   }, error = function(e) {
-    cat("Erro ao ler secao", section_name, ":", e$message, "\n")
+    cat("❌ Erro ao ler secao", section_name, ":", e$message, "\n")
     return(data.frame())
   })
 }
 
-# Funcao para gerar grafico de evolucao do peso por secao
+# Funcao para gerar grafico de evolucao do peso
 generate_weight_comparison_chart <- function(duthanga_geral, duthanga_refeicao, ganho_peso) {
-  # Filtrar e preparar dados de cada secao
   prep_data <- function(df) {
     if(nrow(df) == 0) return(data.frame())
     df %>% 
@@ -114,7 +144,7 @@ generate_weight_comparison_chart <- function(duthanga_geral, duthanga_refeicao, 
   )
   
   if(nrow(all_data) == 0) {
-    cat("Nenhum dado valido para grafico de peso\n")
+    cat("⚠️ Nenhum dado valido para grafico de peso\n")
     return(NULL)
   }
   
@@ -149,17 +179,17 @@ generate_weight_comparison_chart <- function(duthanga_geral, duthanga_refeicao, 
     scale_color_manual(values = c("Duthanga Geral" = "red", 
                                   "Duthanga Uma Refeicao" = "blue", 
                                   "Ganho de Peso" = "orange")) +
-    scale_x_date(date_labels = "%m/%d", date_breaks = "1 week")
+    scale_x_date(date_labels = "%m/%d", date_breaks = "2 weeks")
   
   ggsave("charts/weight_comparison.png", plot = p, width = 14, height = 8, dpi = 300, bg = "white")
-  cat("Grafico de peso salvo: charts/weight_comparison.png\n")
+  cat("✅ Grafico de peso salvo: charts/weight_comparison.png\n")
   return(p)
 }
 
-# Funcao para gerar grafico de medidas corporais por secao
+# Funcao para gerar grafico de medidas corporais
 generate_measurements_by_section <- function(section_data, section_name) {
   if(is.null(section_data) || nrow(section_data) == 0) {
-    cat("Sem dados para medidas de", section_name, "\n")
+    cat("⚠️ Sem dados para medidas de", section_name, "\n")
     return(NULL)
   }
   
@@ -179,7 +209,7 @@ generate_measurements_by_section <- function(section_data, section_name) {
     )
   
   if(nrow(measurements_long) == 0) {
-    cat("Nenhuma medida valida para", section_name, "\n")
+    cat("⚠️ Nenhuma medida valida para", section_name, "\n")
     return(NULL)
   }
   
@@ -206,18 +236,17 @@ generate_measurements_by_section <- function(section_data, section_name) {
       plot.background = element_rect(fill = "white", color = NA)
     ) +
     scale_color_brewer(type = "qual", palette = "Set2") +
-    scale_x_date(date_labels = "%m/%d", date_breaks = "1 week") +
+    scale_x_date(date_labels = "%m/%d", date_breaks = "2 weeks") +
     facet_wrap(~medida, scales = "free_y", ncol = 2)
   
   filename <- paste0("charts/measurements_", gsub(" ", "_", tolower(section_name)), ".png")
   ggsave(filename, plot = p, width = 12, height = 8, dpi = 300, bg = "white")
-  cat("Grafico de medidas salvo:", filename, "\n")
+  cat("✅ Grafico de medidas salvo:", filename, "\n")
   return(p)
 }
 
-# Funcao para gerar grafico de IMC comparativo
+# Funcao para gerar grafico de IMC
 generate_imc_comparison <- function(duthanga_geral, duthanga_refeicao, ganho_peso) {
-  # Filtrar e preparar dados de cada secao
   prep_data <- function(df) {
     if(nrow(df) == 0) return(data.frame())
     df %>% 
@@ -232,7 +261,7 @@ generate_imc_comparison <- function(duthanga_geral, duthanga_refeicao, ganho_pes
   )
   
   if(nrow(all_data) == 0) {
-    cat("Nenhum dado valido para grafico de IMC\n")
+    cat("⚠️ Nenhum dado valido para grafico de IMC\n")
     return(NULL)
   }
   
@@ -268,16 +297,15 @@ generate_imc_comparison <- function(duthanga_geral, duthanga_refeicao, ganho_pes
     scale_color_manual(values = c("Duthanga Geral" = "red", 
                                   "Duthanga Uma Refeicao" = "blue", 
                                   "Ganho de Peso" = "orange")) +
-    scale_x_date(date_labels = "%m/%d", date_breaks = "1 week")
+    scale_x_date(date_labels = "%m/%d", date_breaks = "2 weeks")
   
   ggsave("charts/imc_comparison.png", plot = p, width = 14, height = 8, dpi = 300, bg = "white")
-  cat("Grafico de IMC salvo: charts/imc_comparison.png\n")
+  cat("✅ Grafico de IMC salvo: charts/imc_comparison.png\n")
   return(p)
 }
 
 # Funcao para gerar tabela HTML completa (SOMENTE DUTHANGA GERAL)
 generate_complete_table <- function(duthanga_geral, duthanga_refeicao, ganho_peso) {
-  # Usar somente dados da Duthanga Geral para evitar duplicacao
   all_data <- duthanga_geral %>%
     arrange(desc(data)) %>%
     mutate(
@@ -286,9 +314,9 @@ generate_complete_table <- function(duthanga_geral, duthanga_refeicao, ganho_pes
     )
   
   if(nrow(all_data) == 0) {
-    html_content <- "<p class='text-muted'>Nenhum dado disponivel ainda. Dados serao carregados na proxima atualizacao.</p>"
+    html_content <- "<p class='text-muted'>Nenhum dado disponivel. Dados serao carregados na proxima atualizacao.</p>"
     writeLines(html_content, "charts/complete_table.html")
-    cat("Tabela vazia criada: charts/complete_table.html\n")
+    cat("⚠️ Tabela vazia criada: charts/complete_table.html\n")
     return(html_content)
   }
   
@@ -314,9 +342,6 @@ generate_complete_table <- function(duthanga_geral, duthanga_refeicao, ganho_pes
   for(i in 1:nrow(all_data)) {
     row <- all_data[i, ]
     
-    # Badge sempre primary para Duthanga Geral
-    badge_color <- "primary"
-    
     html_table <- paste0(html_table,
       '<tr>',
       '<td>', row$data_formatada, '</td>',
@@ -327,7 +352,7 @@ generate_complete_table <- function(duthanga_geral, duthanga_refeicao, ganho_pes
       '<td>', ifelse(is.na(row$quadril_cm), '-', sprintf("%.1f", row$quadril_cm)), '</td>',
       '<td>', ifelse(is.na(row$panturrilha_cm), '-', sprintf("%.1f", row$panturrilha_cm)), '</td>',
       '<td>', row$imc_formatado, '</td>',
-      '<td><span class="badge bg-', badge_color, '">', row$secao, '</span></td>',
+      '<td><span class="badge bg-primary">', row$secao, '</span></td>',
       '</tr>'
     )
   }
@@ -335,28 +360,15 @@ generate_complete_table <- function(duthanga_geral, duthanga_refeicao, ganho_pes
   html_table <- paste0(html_table,
     '</tbody>',
     '</table>',
-    '</div>',
-    '<script>',
-    'if(typeof jQuery !== "undefined" && jQuery.fn.DataTable) {',
-    '  jQuery(document).ready(function() {',
-    '    jQuery("#complete-data-table").DataTable({',
-    '      "order": [[ 0, "desc" ]],',
-    '      "pageLength": 25,',
-    '      "language": {',
-    '        "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Portuguese-Brasil.json"',
-    '      }',
-    '    });',
-    '  });',
-    '}',
-    '</script>'
+    '</div>'
   )
   
   writeLines(html_table, "charts/complete_table.html")
-  cat("Tabela HTML gerada: charts/complete_table.html\n")
+  cat("✅ Tabela HTML gerada: charts/complete_table.html com", nrow(all_data), "registros\n")
   return(html_table)
 }
 
-# Funcao para gerar dados JSON para a pagina web
+# Funcao para gerar dados JSON
 generate_json_data <- function(duthanga_geral, duthanga_refeicao, ganho_peso) {
   latest_geral <- if(nrow(duthanga_geral) > 0) tail(duthanga_geral, 1) else NULL
   latest_refeicao <- if(nrow(duthanga_refeicao) > 0) tail(duthanga_refeicao, 1) else NULL
@@ -374,7 +386,6 @@ generate_json_data <- function(duthanga_geral, duthanga_refeicao, ganho_peso) {
     most_recent <- list(peso_kg = 70, imc = 22.9)
   }
   
-  # Garantir valores numericos validos
   current_weight <- ifelse(is.null(most_recent$peso_kg) || is.na(most_recent$peso_kg), 70, most_recent$peso_kg)
   current_imc <- ifelse(is.null(most_recent$imc) || is.na(most_recent$imc), 22.9, most_recent$imc)
   
@@ -401,50 +412,56 @@ generate_json_data <- function(duthanga_geral, duthanga_refeicao, ganho_peso) {
   )
   
   write_json(summary_data, "charts/dashboard_data.json", pretty = TRUE)
-  cat("JSON gerado: charts/dashboard_data.json\n")
+  cat("✅ JSON gerado: charts/dashboard_data.json\n")
   return(summary_data)
 }
 
 # Funcao principal
 main <- function() {
-  cat("Iniciando geracao de dashboard budista...\n")
+  cat("🚀 Iniciando geracao de dashboard budista FINAL...\n")
   
   if(!dir.exists("charts")) dir.create("charts")
   
-  cat("Lendo dados de Duthanga Geral (linha 2+)...\n")
+  cat("\n📊 Lendo dados de Duthanga Geral (linha 2+)...\n")
   duthanga_geral <- read_section_data(2, "Duthanga Geral")
   
-  cat("Lendo dados de Duthanga Uma Refeicao (linha 32+)...\n")
+  cat("\n📊 Lendo dados de Duthanga Uma Refeicao (linha 32+)...\n")
   duthanga_refeicao <- read_section_data(32, "Duthanga Uma Refeicao")
   
-  cat("Lendo dados de Ganho de Peso (linha 47+)...\n")
+  cat("\n📊 Lendo dados de Ganho de Peso (linha 47+)...\n")
   ganho_peso <- read_section_data(47, "Ganho de Peso")
   
   total_records <- nrow(duthanga_geral) + nrow(duthanga_refeicao) + nrow(ganho_peso)
+  cat("\n📈 Total de registros processados:", total_records, "\n")
   
   if(total_records == 0) {
-    cat("Erro: Nenhum dado valido encontrado em nenhuma secao.\n")
+    cat("❌ Erro: Nenhum dado valido encontrado em nenhuma secao.\n")
     return(FALSE)
   }
   
-  cat("Gerando grafico comparativo de peso...\n")
+  cat("\n🎨 Gerando grafico comparativo de peso...\n")
   generate_weight_comparison_chart(duthanga_geral, duthanga_refeicao, ganho_peso)
   
-  cat("Gerando graficos de medidas corporais...\n")
+  cat("\n🎨 Gerando graficos de medidas corporais...\n")
   if(nrow(duthanga_geral) > 0) generate_measurements_by_section(duthanga_geral, "Duthanga Geral")
   if(nrow(duthanga_refeicao) > 0) generate_measurements_by_section(duthanga_refeicao, "Duthanga Uma Refeicao")
   if(nrow(ganho_peso) > 0) generate_measurements_by_section(ganho_peso, "Ganho de Peso")
   
-  cat("Gerando grafico comparativo de IMC...\n")
+  cat("\n🎨 Gerando grafico comparativo de IMC...\n")
   generate_imc_comparison(duthanga_geral, duthanga_refeicao, ganho_peso)
   
-  cat("Gerando tabela HTML completa...\n")
+  cat("\n📋 Gerando tabela HTML completa...\n")
   generate_complete_table(duthanga_geral, duthanga_refeicao, ganho_peso)
   
-  cat("Gerando dados JSON...\n")
+  cat("\n📄 Gerando dados JSON...\n")
   generate_json_data(duthanga_geral, duthanga_refeicao, ganho_peso)
   
-  cat("Dashboard budista gerado com sucesso!\n")
+  cat("\n🎉 Dashboard budista gerado com sucesso!\n")
+  cat("📊 Registros por secao:\n")
+  cat("  - Duthanga Geral:", nrow(duthanga_geral), "registros\n")
+  cat("  - Uma Refeicao:", nrow(duthanga_refeicao), "registros\n")
+  cat("  - Ganho de Peso:", nrow(ganho_peso), "registros\n")
+  
   return(TRUE)
 }
 
