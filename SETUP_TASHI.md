@@ -1,6 +1,6 @@
-# 🚀 Setup para TashiRabten - Painel Antropométrico
+# Setup
 
-## Próximos Passos
+## Passos
 
 ### 1. Criar Repositório
 1. Vá para https:ok//github.com/TashiRabten/
@@ -30,19 +30,11 @@ git push origin main
 ### 4. Ativar GitHub Pages
 - Settings > Pages > Deploy from branch "main"
 
-### 5. Ajustar sua altura
+### 5. Ajustar altura
 No arquivo `generate_charts.R`, linha ~30, altere:
 ```r
 altura_m = 1.75,  # Substitua pela sua altura real
 ```
 
-## 🌐 Seu site ficará disponível em:
+## 🌐 Site ficará disponível em:
 `https://tashirabten.github.io/antropometria-dashboard/`
-
-## ✅ O que já está pronto:
-- ✅ Página HTML responsiva com gráficos
-- ✅ Script R para conectar com Google Sheets
-- ✅ GitHub Actions para atualização automática a cada 6h
-- ✅ Cálculo automático de IMC
-- ✅ Indicadores visuais de progresso para meta 73kg
-- ✅ Referência às nutricionistas Msa. Natalia Medina e Msa. Julia Barichello
