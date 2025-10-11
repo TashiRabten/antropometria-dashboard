@@ -256,10 +256,12 @@ extract_safe_numeric <- function(value_input) {
 read_section_data <- function(start_row, section_name) {
   tryCatch({
     cat("📍 Tentando ler seção:", section_name, "a partir da linha", start_row, "\n")
-    range_spec <- paste0("A", start_row, ":G1000")
+    
+    # Read headers from row 1
+    range_spec <- paste0("A1:G", start_row + 1000)
     cat("📏 Range especificado:", range_spec, "\n")
     cat("🔄 Fazendo leitura do Google Sheets...\n")
-    data <- read_sheet(sheet_url, range = range_spec, col_names = FALSE)
+    data <- read_sheet(sheet_url, range = range_spec, col_names = TRUE, skip = start_row - 1)
     cat("✅ Leitura bem-sucedida!\n")
     
     cat("📊 Dados brutos lidos de", section_name, ":", nrow(data), "linhas\n")
