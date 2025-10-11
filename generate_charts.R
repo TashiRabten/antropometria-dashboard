@@ -253,33 +253,47 @@ extract_safe_numeric <- function(value_input) {
 
 
 # Funcao para ler dados de uma secao especifica
+# Funcao para ler dados de uma secao especifica
 read_section_data <- function(start_row, section_name) {
   tryCatch({
     cat("📍 Tentando ler seção:", section_name, "a partir da linha", start_row, "\n")
     
-    # Read headers from row 1
-    range_spec <- paste0("A1:G", start_row + 1000)
+    # Read INCLUDING headers from row 1
+    range_spec <- paste0("A1:G1000")
     cat("📏 Range especificado:", range_spec, "\n")
     cat("🔄 Fazendo leitura do Google Sheets...\n")
-    data <- read_sheet(sheet_url, range = range_spec, col_names = TRUE, skip = start_row - 1)
+    
+    # Read with headers
+    data <- read_sheet(sheet_url, range = range_spec, col_names = TRUE)
     cat("✅ Leitura bem-sucedida!\n")
+    
+    # Now skip to the desired start row (adjust for 0-indexing after header)
+    if(start_row > 1) {
+      rows_to_skip <- start_row - 1  # -1 because row 1 is headers
+      if(nrow(data) > rows_to_skip) {
+        data <- data[(rows_to_skip + 1):nrow(data), ]
+      }
+    }
     
     cat("📊 Dados brutos lidos de", section_name, ":", nrow(data), "linhas\n")
     
+    # Get column names for reference
+    col_names <- names(data)
+    cat("📋 Colunas detectadas:", paste(col_names, collapse = ", "), "\n")
     
-    # Processar dados com parser flexivel
+    # Processar dados com parser flexivel - use actual column names
     data <- data %>%
       rowwise() %>%
       mutate(
-        data_original = ...1,
-        data = parse_date_flexible(...1),
-        horario_original = ...2,
-        horario = parse_time(...2),
-        peso_kg = extract_safe_numeric(...3),
-        braco_cm = extract_safe_numeric(...4),
-        cintura_cm = extract_safe_numeric(...5),
-        quadril_cm = extract_safe_numeric(...6),
-        panturrilha_cm = extract_safe_numeric(...7),
+        data_original = .data[[col_names[1]]],
+        data = parse_date_flexible(.data[[col_names[1]]]),
+        horario_original = .data[[col_names[2]]],
+        horario = parse_time(.data[[col_names[2]]]),
+        peso_kg = extract_safe_numeric(.data[[col_names[3]]]),
+        braco_cm = extract_safe_numeric(.data[[col_names[4]]]),
+        cintura_cm = extract_safe_numeric(.data[[col_names[5]]]),
+        quadril_cm = extract_safe_numeric(.data[[col_names[6]]]),
+        panturrilha_cm = extract_safe_numeric(.data[[col_names[7]]]),
         altura_m = 1.78,
         secao = section_name
       ) %>%
