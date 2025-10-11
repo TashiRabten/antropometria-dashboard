@@ -283,21 +283,19 @@ read_section_data <- function(start_row, section_name) {
     
     # Processar dados com parser flexivel - use actual column names
     data <- data %>%
-      rowwise() %>%
       mutate(
-        data_original = .data[[col_names[1]]],
-        data = parse_date_flexible(.data[[col_names[1]]]),
-        horario_original = .data[[col_names[2]]],
-        horario = parse_time(.data[[col_names[2]]]),
-        peso_kg = extract_safe_numeric(.data[[col_names[3]]]),
-        braco_cm = extract_safe_numeric(.data[[col_names[4]]]),
-        cintura_cm = extract_safe_numeric(.data[[col_names[5]]]),
-        quadril_cm = extract_safe_numeric(.data[[col_names[6]]]),
-        panturrilha_cm = extract_safe_numeric(.data[[col_names[7]]]),
+        data_original = Dia,
+        data = parse_date_flexible(Dia),
+        horario_original = Hora,
+        horario = parse_time(Hora),
+        peso_kg = extract_safe_numeric(Peso),
+        braco_cm = extract_safe_numeric(`CB (braço)`),
+        cintura_cm = extract_safe_numeric(`CC (cintura)`),
+        quadril_cm = extract_safe_numeric(`CQ (quadril)`),
+        panturrilha_cm = extract_safe_numeric(`CP (panturrilha)`),
         altura_m = 1.78,
         secao = section_name
       ) %>%
-      ungroup() %>%
       # Filtrar apenas registros com data e peso validos
       filter(!is.na(data) & !is.na(peso_kg)) %>%
       mutate(imc = peso_kg / (altura_m^2)) %>%
