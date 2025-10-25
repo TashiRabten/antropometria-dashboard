@@ -1,5 +1,5 @@
 {
-  "last_update": ["2025-10-25 15:02:30"],
+  "last_update": ["2025-10-25 15:29:04"],
   "current_weight": [72.3],
   "current_imc": [22.8],
   "current_braco": [32.5],
@@ -11,15 +11,15 @@
   "sections": {
     "duthanga_geral": {
       "records": [49],
-      "latest_date": ["2025-10-23"]
+      "latest_date": ["2025-10-25"]
     },
     "duthanga_refeicao": {
       "records": [19],
-      "latest_date": ["2025-10-23"]
+      "latest_date": ["2025-10-25"]
     },
     "ganho_peso": {
       "records": [4],
-      "latest_date": ["2025-10-23"]
+      "latest_date": ["2025-10-25"]
     }
   }
 }
