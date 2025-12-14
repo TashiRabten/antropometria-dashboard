@@ -572,18 +572,18 @@ function extractMyChartSingleValues(text) {
     }
 
     // Pattern 6: Value on own line before visual chart
-    // Format: "Test Name\nNormal range: X - Y unit\n\nVALUE\nX\n\nY"
-    // The value appears after the unit, possibly with lots of text in between
-    // Need to find numbers and skip those that equal the range boundaries
+    // Format: "Test Name\nNormal range: 30 - 100 unit\n...\n30 30   100 100  33"
+    // The actual value appears AFTER the range boundaries are repeated
     // IMPORTANT: Test name can start with digit (e.g., "25-OH Vitamin D")
-    const visualChartPattern = /([A-Za-z0-9][A-Za-z0-9\s\-\/\(\),]{3,50}?)\s+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)[\s\S]{0,400}?(\d+\.?\d*)/gi;
+    const visualChartPattern = /([A-Za-z0-9][A-Za-z0-9\s\-\/\(\),]{3,50}?)\s+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)[\s\S]{0,500}?([\d.]+)\s+\2[\s\S]{0,50}?\3[\s\S]{0,50}?([\d.]+)/gi;
 
     while ((match = visualChartPattern.exec(text)) !== null) {
         let testName = match[1].trim();
         const lowRange = parseFloat(match[2]);
         const highRange = parseFloat(match[3]);
         const unit = match[4];
-        const value = parseFloat(match[5]);
+        // match[5] is the first occurrence of lowRange (skip)
+        const value = parseFloat(match[6]); // The actual value after the repeated range
 
         // Skip if value is the same as range boundaries (likely part of chart)
         if (value === lowRange || value === highRange) {
