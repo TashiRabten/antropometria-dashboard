@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados de Exames - Dashboard Budista</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+    <link href="labs.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <span class="dharma-wheel">☸</span> Dashboard Budista
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">🏠 Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="duthanga.html">🏮 Práticas Duthanga</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="antropometria.html">📊 Antropometria</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="labs.html">🔬 Labs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="dados.html">📋 Dados Completos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="sobre.html">ℹ️ Sobre</a>
+                    </li>
+                    <li class="nav-item" id="logout-nav" style="display: none;">
+                        <a class="nav-link" href="#" onclick="logout(); return false;">🚪 Sair</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-container">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-6 col-lg-4">
+                    <div class="login-card">
+                        <div class="text-center mb-4">
+                            <div class="login-icon">🔬</div>
+                            <h2>Acesso aos Exames</h2>
+                            <p class="text-muted">Informações de Saúde Protegidas</p>
+                        </div>
+                        <form id="login-form" onsubmit="handleLogin(event)">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Usuário</label>
+                                <input type="text" class="form-control" id="username" required autocomplete="username">
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Senha</label>
+                                <input type="password" class="form-control" id="password" required autocomplete="current-password">
+                            </div>
+                            <div id="login-error" class="alert alert-danger" style="display: none;">
+                                Credenciais inválidas. Tente novamente.
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Acessar Exames</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content (Protected) -->
+    <div id="main-content" class="container mt-4" style="display: none;">
+        <!-- Hero Section -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="hero-card text-center">
+                    <h1>🔬 Dashboard de Exames Laboratoriais</h1>
+                    <div class="zen-quote">
+                        "Corpo e mente são interdependentes"
+                    </div>
+                    <p class="lead">Acompanhe e analise resultados de exames de saúde ao longo do tempo</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <div class="metric-icon">📄</div>
+                    <h5>Total de Exames</h5>
+                    <h3 id="total-labs">0</h3>
+                    <p class="text-muted">arquivos</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <div class="metric-icon">📅</div>
+                    <h5>Último Exame</h5>
+                    <h3 id="latest-lab-date">--</h3>
+                    <p class="text-muted">data</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <div class="metric-icon">⏱️</div>
+                    <h5>Exames de Período</h5>
+                    <h3 id="period-labs-count">0</h3>
+                    <p class="text-muted">históricos</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <div class="metric-icon">📈</div>
+                    <h5>Pontos de Dados</h5>
+                    <h3 id="total-data-points">0</h3>
+                    <p class="text-muted">valores</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="upload-card">
+                    <div class="upload-zone" id="upload-zone">
+                        <div class="upload-icon">📁</div>
+                        <h5>Adicionar Exames</h5>
+                        <p class="text-muted">Arraste arquivos PDF ou imagens aqui, ou clique para selecionar</p>
+                        <input type="file" id="file-input" multiple accept=".pdf,.jpg,.jpeg,.png" style="display: none;">
+                        <button class="btn btn-primary mt-2" onclick="document.getElementById('file-input').click()">
+                            Selecionar Arquivos
+                        </button>
+                    </div>
+                    <div id="upload-progress" class="mt-3" style="display: none;">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" id="upload-progress-bar"></div>
+                        </div>
+                        <p class="text-center mt-2" id="upload-status">Processando...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters and Controls -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="filters-card">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label">Filtrar por Tipo</label>
+                            <select class="form-select" id="filter-type" onchange="filterLabs()">
+                                <option value="all">Todos os Exames</option>
+                                <!-- Opções adicionadas dinamicamente pelo parser -->
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Período de Tempo</label>
+                            <select class="form-select" id="filter-timerange" onchange="filterLabs()">
+                                <option value="all">Todo o Período</option>
+                                <option value="year">Último Ano</option>
+                                <option value="6months">Últimos 6 Meses</option>
+                                <option value="3months">Últimos 3 Meses</option>
+                                <option value="prediet">Pré-Dieta (2018-2022)</option>
+                                <option value="postdiet">Pós-Dieta (2023+)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Ordenar Por</label>
+                            <select class="form-select" id="sort-by" onchange="filterLabs()">
+                                <option value="newest">Mais Recentes</option>
+                                <option value="oldest">Mais Antigos</option>
+                                <option value="type">Por Tipo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Ações</label>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary btn-sm" onclick="scanLabFiles()">
+                                    🔄 Atualizar Lista
+                                </button>
+                                <button class="btn btn-outline-warning btn-sm" onclick="reprocessAllLabs()">
+                                    ⚙️ Reprocessar Exames
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="clearAllLabs()">
+                                    🗑️ Limpar Todos
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Tabs -->
+        <div class="row">
+            <div class="col-md-12">
+                <ul class="nav nav-tabs" id="viewTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="list-tab" data-bs-toggle="tab" data-bs-target="#list-view" type="button" role="tab">
+                            📋 Lista de Exames
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="charts-tab" data-bs-toggle="tab" data-bs-target="#charts-view" type="button" role="tab">
+                            📊 Gráficos e Tendências
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison-view" type="button" role="tab">
+                            ⚖️ Antes/Depois
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="viewTabsContent">
+                    <!-- Lab List View -->
+                    <div class="tab-pane fade show active" id="list-view" role="tabpanel">
+                        <div class="chart-container">
+                            <div id="labs-loading" class="text-center p-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                                <p class="mt-3">Escaneando arquivos de exames...</p>
+                            </div>
+                            <div id="labs-list" class="row" style="display: none;">
+                                <!-- Os cards de exames serão inseridos aqui dinamicamente -->
+                            </div>
+                            <div id="labs-empty" class="text-center p-5" style="display: none;">
+                                <p class="text-muted">Nenhum exame encontrado com os filtros atuais.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts View -->
+                    <div class="tab-pane fade" id="charts-view" role="tabpanel">
+                        <div class="chart-container">
+                            <h4>📈 Tendências de Valores Laboratoriais</h4>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Selecionar Marcador</label>
+                                    <select class="form-select" id="chart-marker">
+                                        <option value="">Carregando marcadores...</option>
+                                        <!-- Opções adicionadas dinamicamente pelo parser -->
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Período de Tempo</label>
+                                    <select class="form-select" id="chart-timerange">
+                                        <option value="all">Todo o Período (2018-Presente)</option>
+                                        <option value="recent">Apenas Recente (2023+)</option>
+                                        <option value="baseline">Linha de Base (2018-2022)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <canvas id="trend-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Before/After Comparison -->
+                    <div class="tab-pane fade" id="comparison-view" role="tabpanel">
+                        <div class="chart-container">
+                            <h4>⚖️ Comparação Pré-Dieta vs Pós-Dieta</h4>
+                            <p class="text-muted">Compare a saúde baseline (2018-2022) com os valores atuais (2023-2025)</p>
+                            <canvas id="comparison-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lab Detail Modal -->
+    <div class="modal fade" id="labDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="labModalTitle">Detalhes do Exame</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div id="pdf-viewer-container">
+                                <!-- Visualizador de PDF/Imagem será inserido aqui -->
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Valores Extraídos</h6>
+                            <div id="extracted-values" class="table-responsive">
+                                <!-- Valores de exames extraídos serão mostrados aqui -->
+                            </div>
+                            <div class="mt-3">
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewInChart()">
+                                    📊 Ver no Gráfico
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="zen-quote">
+                        "Que todos os seres tenham a felicidade (nirvana) e suas causas"
+                    </div>
+                    <small class="text-muted">Metta (Amor Bondoso)</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <p class="mb-0">Para Msa. Natalia Medina e Msa. Julia Barichello</p>
+                    <small class="text-muted">Informações de Saúde Protegidas</small>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4"></script>
+
+    <!-- Firebase SDK (v10 compat mode) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
+    <!-- Firebase Configuration & Modules -->
+    <script src="firebase-config.js"></script>
+    <script src="firebase-auth.js"></script>
+    <script src="firebase-storage.js"></script>
+    <script src="firebase-db.js"></script>
+
+    <!-- Dashboard Scripts -->
+    <script src="dashboard.js"></script>
+
+    <!-- Labs Scripts -->
+    <!-- DEPRECATED: IndexedDB version (replaced by Firebase)
+    <script src="labs-auth.js"></script>
+    <script src="labs-storage.js"></script>
+    -->
+
+    <script src="labs-parser.js"></script>
+    <script src="labs-charts.js"></script>
+    <script src="labs-upload.js"></script>
+</body>
+</html>

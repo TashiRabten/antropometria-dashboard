@@ -1,0 +1,482 @@
+/* Lab Management System - CSS */
+/* Extends existing styles.css design system */
+
+/* Login Screen */
+.login-container {
+    min-height: calc(100vh - 100px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 0;
+}
+
+.login-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-heavy);
+    padding: 2.5rem;
+    animation: fadeIn 0.6s ease-out;
+}
+
+.login-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.login-card h2 {
+    color: var(--dark-color);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.login-card .form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.login-card .btn-primary {
+    background: var(--gradient-primary);
+    border: none;
+    padding: 0.75rem;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.login-card .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+}
+
+/* Lab Cards */
+.lab-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    transition: var(--transition);
+    cursor: pointer;
+    position: relative;
+}
+
+.lab-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-heavy);
+}
+
+.lab-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.lab-card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--dark-color);
+    margin: 0;
+}
+
+.lab-card-date {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.lab-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.lab-badge-period {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.lab-badge-mychart {
+    background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+    color: white;
+}
+
+.lab-badge-followmyhealth {
+    background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+    color: white;
+}
+
+.lab-badge-chart {
+    background: linear-gradient(135deg, #45B7D1 0%, #96C93D 100%);
+    color: white;
+}
+
+.lab-card-body {
+    border-top: 1px solid #eee;
+    padding-top: 1rem;
+}
+
+.lab-value-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.lab-value-tag {
+    background: var(--light-color);
+    padding: 0.25rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--dark-color);
+}
+
+.lab-value-tag.abnormal {
+    background: rgba(244, 67, 54, 0.1);
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+.lab-value-tag.normal {
+    background: rgba(76, 175, 80, 0.1);
+    color: var(--success-color);
+}
+
+/* Lab Detail Modal */
+#pdf-viewer-container {
+    background: #f5f5f5;
+    border-radius: 8px;
+    min-height: 500px;
+    max-height: 70vh;
+    overflow: auto;
+    padding: 1rem;
+}
+
+#pdf-viewer-container iframe,
+#pdf-viewer-container img {
+    width: 100%;
+    border: none;
+    border-radius: 4px;
+}
+
+#extracted-values {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.value-row {
+    padding: 0.75rem;
+    border-bottom: 1px solid #eee;
+}
+
+.value-row:last-child {
+    border-bottom: none;
+}
+
+.value-name {
+    font-weight: 600;
+    color: var(--dark-color);
+    font-size: 0.9rem;
+}
+
+.value-number {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 0.25rem 0;
+}
+
+.value-number.abnormal {
+    color: var(--danger-color);
+}
+
+.value-range {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.value-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 0.5rem;
+}
+
+.value-status.normal {
+    background: rgba(76, 175, 80, 0.1);
+    color: var(--success-color);
+}
+
+.value-status.high {
+    background: rgba(244, 67, 54, 0.1);
+    color: var(--danger-color);
+}
+
+.value-status.low {
+    background: rgba(255, 152, 0, 0.1);
+    color: var(--warning-color);
+}
+
+/* Filters Card */
+.filters-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.filters-card .form-label {
+    font-weight: 600;
+    color: var(--dark-color);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Tabs */
+.nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 1.5rem;
+}
+
+.nav-tabs .nav-link {
+    color: #666;
+    font-weight: 600;
+    padding: 1rem 1.5rem;
+    border: none;
+    border-bottom: 3px solid transparent;
+    transition: var(--transition);
+}
+
+.nav-tabs .nav-link:hover {
+    border-bottom-color: var(--accent-color);
+    color: var(--primary-color);
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background: transparent;
+}
+
+/* Charts */
+#trend-chart,
+#comparison-chart {
+    max-height: 500px;
+    margin-top: 1.5rem;
+}
+
+/* Loading States */
+#labs-loading {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Empty State */
+#labs-empty {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+}
+
+/* Lab Type Icons */
+.lab-type-icon {
+    font-size: 2rem;
+    margin-right: 0.5rem;
+}
+
+.lab-type-CMP::before {
+    content: "⚗️";
+}
+
+.lab-type-CBC::before {
+    content: "🩸";
+}
+
+.lab-type-B12::before {
+    content: "💊";
+}
+
+.lab-type-Ferritin::before {
+    content: "🧲";
+}
+
+.lab-type-chart::before {
+    content: "📊";
+}
+
+.lab-type-period::before {
+    content: "📅";
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .login-card {
+        padding: 1.5rem;
+    }
+
+    .lab-card {
+        padding: 1rem;
+    }
+
+    .filters-card .row > div {
+        margin-bottom: 1rem;
+    }
+
+    .nav-tabs .nav-link {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .login-icon {
+        font-size: 3rem;
+    }
+
+    .login-card h2 {
+        font-size: 1.5rem;
+    }
+
+    .lab-card-title {
+        font-size: 1rem;
+    }
+
+    .value-number {
+        font-size: 1.1rem;
+    }
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Chart Container Enhancements */
+.chart-container canvas {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+/* Period Lab Indicator */
+.period-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Abnormal Value Highlight */
+.abnormal-highlight {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Success Messages */
+.alert-success {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 100%);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    color: var(--success-color);
+    border-radius: var(--border-radius);
+}
+
+/* Info Messages */
+.alert-info {
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(33, 150, 243, 0.05) 100%);
+    border: 1px solid rgba(33, 150, 243, 0.3);
+    color: var(--info-color);
+    border-radius: var(--border-radius);
+}
+
+/* Upload Zone */
+.upload-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.upload-zone {
+    border: 3px dashed #cbd5e0;
+    border-radius: var(--border-radius);
+    padding: 3rem 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.upload-zone:hover {
+    border-color: var(--primary-color);
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.upload-zone.drag-over {
+    border-color: var(--primary-color);
+    background: rgba(102, 126, 234, 0.1);
+    transform: scale(1.02);
+}
+
+.upload-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.7;
+}
+
+.upload-zone h5 {
+    color: var(--dark-color);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.upload-zone p {
+    margin-bottom: 0;
+}
+
+#upload-progress .progress {
+    height: 25px;
+    border-radius: var(--border-radius);
+}
+
+#upload-progress .progress-bar {
+    background: var(--gradient-primary);
+    font-weight: 600;
+}
+
+#upload-status {
+    font-size: 0.9rem;
+    color: var(--dark-color);
+    font-weight: 500;
+}
