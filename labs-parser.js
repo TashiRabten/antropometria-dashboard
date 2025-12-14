@@ -1,8 +1,9 @@
-// Lab Parser - Handles 4 different lab formats
+// Lab Parser - Handles 5 different lab formats
 // 1. MyChart Single-Date Format
 // 2. Follow My Health Format
 // 3. MyChart Period Format (multi-date)
 // 4. Chart Labs (JPG OCR)
+// 5. UI Health Pathology Laboratories Format
 
 // Initialize PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.worker.min.js';
@@ -208,6 +209,13 @@ function generateLabId(filename) {
 
 // Identify PDF format
 function identifyPDFFormat(text, filename) {
+    // Check for UI Health format first
+    // Identifiers: "UI Health Pathology Laboratories", "PATIENT DEMOGRAPHICS", "ORDER INFORMATION"
+    if (text.includes('UI Health Pathology Laboratories') ||
+        (text.includes('PATIENT DEMOGRAPHICS') && text.includes('ORDER INFORMATION'))) {
+        return 'ui-health';
+    }
+
     // Check for period lab (historical multi-date format)
     // 1. Filename has '_all'
     // 2. Text has "Past Results" (with or without dash)
@@ -254,6 +262,8 @@ async function parsePDF(labInfo, text) {
             return parseHealow(labInfo, text);
         case 'mychart-period':
             return parseMyChartPeriod(labInfo, text);
+        case 'ui-health':
+            return parseUIHealth(labInfo, text);
         default:
             return labInfo;
     }
@@ -772,6 +782,109 @@ function parseMyChartPeriod(labInfo, text) {
     console.log(`📊 ${Object.keys(labInfo.values).length} marcadores extraídos`);
 
     return labInfo;
+}
+
+// Parse UI Health Format
+function parseUIHealth(labInfo, text) {
+    console.log('📋 Parseando formato UI Health...');
+
+    // Extract collection date (format: "Collected: MM/DD/YYYY HH:MM")
+    const collectedMatch = text.match(/Collected:\s+(\d{1,2})\/(\d{1,2})\/(\d{4})\s+\d{1,2}:\d{2}/);
+    if (collectedMatch) {
+        const month = parseInt(collectedMatch[1]);
+        const day = parseInt(collectedMatch[2]);
+        const year = parseInt(collectedMatch[3]);
+        labInfo.collectionDate = new Date(year, month - 1, day);
+        labInfo.dates = [labInfo.collectionDate];
+        console.log(`📅 Data de coleta: ${labInfo.collectionDate.toLocaleDateString()}`);
+    }
+
+    // Extract lab type from section header
+    // Look for all-caps section headers like "COMPREHENSIVE METABOLIC PANEL", "CBC W DIFFERENTIAL", etc.
+    const sectionMatch = text.match(/\n([A-Z][A-Z\s&-]{10,60})\n(?:[A-Z][a-z])/);
+    if (sectionMatch) {
+        const sectionName = sectionMatch[1].trim();
+
+        // Map common section names to lab types
+        if (sectionName.includes('COMPREHENSIVE METABOLIC')) labInfo.labType = 'CMP';
+        else if (sectionName.includes('CBC W DIFFERENTIAL') || sectionName.includes('CBC W')) labInfo.labType = 'CBC';
+        else if (sectionName.includes('LIPID')) labInfo.labType = 'Lipídios';
+        else if (sectionName.includes('ENDOCRINOLOGY')) labInfo.labType = 'Endocrinologia';
+        else labInfo.labType = sectionName;
+
+        console.log(`🏷️ Tipo de exame: ${labInfo.labType}`);
+    }
+
+    // Extract lab values
+    // Format: "Test Name: Value UNIT (Ref: range)" or "Test Name: Value UNIT (High/Low) (Ref: range)"
+    labInfo.values = extractUIHealthValues(text);
+    console.log(`📊 ${Object.keys(labInfo.values).length} valores extraídos`);
+
+    return labInfo;
+}
+
+// Extract values from UI Health format
+function extractUIHealthValues(text) {
+    const values = {};
+
+    // Pattern: Test Name: Value UNIT (optional: High/Low) (Ref: range)
+    // Examples:
+    // "Blood Urea Nitrogen: 22 MG/DL (High) (Ref: 06-20)"
+    // "Sodium: 140 MMOL/L (Ref: 135-145)"
+    // "Hemoglobin A1c: Pending"
+
+    const lines = text.split('\n');
+
+    for (let line of lines) {
+        line = line.trim();
+
+        // Skip empty lines and headers
+        if (!line || line.includes('PATIENT DEMOGRAPHICS') || line.includes('ORDER INFORMATION')) {
+            continue;
+        }
+
+        // Match pattern: "Name: Value UNIT (Flag) (Ref: range)" or "Name: Value UNIT (Ref: range)"
+        const valueMatch = line.match(/^(.+?):\s+(\d+\.?\d*)\s+([A-Z\/]+)(?:\s+\((?:High|Low)\))?\s+\(Ref:\s+([^)]+)\)/);
+
+        if (valueMatch) {
+            const testName = valueMatch[1].trim();
+            const value = parseFloat(valueMatch[2]);
+            const unit = valueMatch[3];
+            const refRange = valueMatch[4];
+
+            // Determine if out of range
+            let flag = '';
+            if (line.includes('(High)')) flag = 'High';
+            else if (line.includes('(Low)')) flag = 'Low';
+
+            values[testName] = {
+                value: value,
+                unit: unit,
+                range: refRange,
+                flag: flag,
+                date: null  // Will be set from collectionDate
+            };
+        } else {
+            // Try matching "Name: Value UNIT" without ref range (for calculated values like eGFR)
+            const simpleMatch = line.match(/^(.+?):\s+(\d+\.?\d*)\s+([A-Z\/]+)(?:\s+\(Ref:\s+([^)]+)\))?$/);
+            if (simpleMatch) {
+                const testName = simpleMatch[1].trim();
+                const value = parseFloat(simpleMatch[2]);
+                const unit = simpleMatch[3];
+                const refRange = simpleMatch[4] || '';
+
+                values[testName] = {
+                    value: value,
+                    unit: unit,
+                    range: refRange,
+                    flag: '',
+                    date: null
+                };
+            }
+        }
+    }
+
+    return values;
 }
 
 // Extract values from period format

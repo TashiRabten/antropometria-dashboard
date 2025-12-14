@@ -1,6 +1,6 @@
 [
   {
-    "origin": ["http://localhost:*", "http://127.0.0.1:*", "https://*.firebaseapp.com"],
+    "origin": ["http://localhost:*", "http://127.0.0.1:*", "https://*.firebaseapp.com", "https://*.github.io"],
     "method": ["GET", "HEAD"],
     "responseHeader": ["Content-Type", "Access-Control-Allow-Origin"],
     "maxAgeSeconds": 3600
