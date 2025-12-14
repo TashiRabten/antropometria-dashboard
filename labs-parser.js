@@ -573,9 +573,10 @@ function extractMyChartSingleValues(text) {
 
     // Pattern 6: Value on own line before visual chart
     // Format: "Test Name\nNormal range: X - Y unit\n\nVALUE\nX\n\nY"
-    // The value appears as a standalone number between the range and the visual chart
-    // Just look for first number after the unit (the actual test value)
-    const visualChartPattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]{3,50}?)\s+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)\s+(\d+\.?\d*)/gi;
+    // The value appears after the unit, possibly with lots of text in between
+    // Need to find numbers and skip those that equal the range boundaries
+    // IMPORTANT: Test name can start with digit (e.g., "25-OH Vitamin D")
+    const visualChartPattern = /([A-Za-z0-9][A-Za-z0-9\s\-\/\(\),]{3,50}?)\s+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)[\s\S]{0,400}?(\d+\.?\d*)/gi;
 
     while ((match = visualChartPattern.exec(text)) !== null) {
         let testName = match[1].trim();
@@ -620,7 +621,8 @@ function extractMyChartSingleValues(text) {
     // Pattern 7: "Value" keyword on one line, number on next line
     // Format: "Test Name\nNormal range: X - Y unit\n\nValue\n123"
     // Important: Test name should NOT span multiple lines (to avoid two-column layouts)
-    const splitValuePattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]{2,60}?)\s+Normal\s+(?:range|value):\s*(?:below\s*<?|above\s*>?)?\s*([\d.]+)(?:\s*-\s*([\d.]+))?\s+([A-Za-z\/]+)[\s\S]{0,50}?Value\s+([\d.]+)/gi;
+    // IMPORTANT: Test name can start with digit (e.g., "25-OH Vitamin D")
+    const splitValuePattern = /([A-Za-z0-9][A-Za-z0-9\s\-\/\(\),]{2,60}?)\s+Normal\s+(?:range|value):\s*(?:below\s*<?|above\s*>?)?\s*([\d.]+)(?:\s*-\s*([\d.]+))?\s+([A-Za-z\/]+)[\s\S]{0,50}?Value\s+([\d.]+)/gi;
 
     while ((match = splitValuePattern.exec(text)) !== null) {
         let testName = match[1].trim();
