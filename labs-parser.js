@@ -574,9 +574,10 @@ function extractMyChartSingleValues(text) {
     // Pattern 6: Value on own line before visual chart
     // Format: "Test Name\nNormal range: 30 - 100 unit\n...\n30 30   100 100  33"
     // The actual value appears AFTER the range boundaries are repeated
-    // IMPORTANT: Test name can start with digit (e.g., "25-OH Vitamin D")
+    // IMPORTANT: Test name can start with digit-dash (e.g., "25-OH Vitamin D")
     // Use programmatic filtering instead of regex backreferences for more reliability
-    const visualChartPattern = /([A-Za-z0-9][A-Za-z0-9\s\-\/\(\),]{3,50}?)\s+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)/gi;
+    // Changed to greedy matching and require proper test name structure
+    const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9\s\-\/\(\),]{2,50})\s+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)/gi;
 
     while ((match = visualChartPattern.exec(text)) !== null) {
         let testName = match[1].trim();
@@ -587,6 +588,12 @@ function extractMyChartSingleValues(text) {
         // Skip if test name has excessive whitespace (likely spanning two columns)
         if (/\s{5,}/.test(testName)) {
             console.log(`  ⚠️ Skipping "${testName}" - excessive whitespace (two-column layout)`);
+            continue;
+        }
+
+        // Skip if test name is just a single digit followed by space (from previous test's chart)
+        if (/^\d\s/.test(testName)) {
+            console.log(`  ⚠️ Skipping "${testName}" - starts with lone digit (likely from previous test)`);
             continue;
         }
 
