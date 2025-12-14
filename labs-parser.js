@@ -575,21 +575,14 @@ function extractMyChartSingleValues(text) {
     // Format: "Test Name\nNormal range: 30 - 100 unit\n...\n30 30   100 100  33"
     // The actual value appears AFTER the range boundaries are repeated
     // IMPORTANT: Test name can start with digit (e.g., "25-OH Vitamin D")
-    const visualChartPattern = /([A-Za-z0-9][A-Za-z0-9\s\-\/\(\),]{3,50}?)\s+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)[\s\S]{0,500}?([\d.]+)\s+\2[\s\S]{0,50}?\3[\s\S]{0,50}?([\d.]+)/gi;
+    // Use programmatic filtering instead of regex backreferences for more reliability
+    const visualChartPattern = /([A-Za-z0-9][A-Za-z0-9\s\-\/\(\),]{3,50}?)\s+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)/gi;
 
     while ((match = visualChartPattern.exec(text)) !== null) {
         let testName = match[1].trim();
         const lowRange = parseFloat(match[2]);
         const highRange = parseFloat(match[3]);
         const unit = match[4];
-        // match[5] is the first occurrence of lowRange (skip)
-        const value = parseFloat(match[6]); // The actual value after the repeated range
-
-        // Skip if value is the same as range boundaries (likely part of chart)
-        if (value === lowRange || value === highRange) {
-            console.log(`  ⚠️ Skipping visual chart match - value ${value} equals range boundary`);
-            continue;
-        }
 
         // Skip if test name has excessive whitespace (likely spanning two columns)
         if (/\s{5,}/.test(testName)) {
@@ -597,24 +590,52 @@ function extractMyChartSingleValues(text) {
             continue;
         }
 
-        // Clean test name
-        testName = testName
-            .replace(/^(New|Old|Final|Preliminary)\s+/i, '')
-            .replace(/\s{2,}/g, ' ')
-            .trim();
+        // Get the segment after the unit until the next "Normal" or reasonable distance
+        const startPos = match.index + match[0].length;
+        const nextNormalPos = text.indexOf('Normal', startPos);
+        const segmentEnd = nextNormalPos > 0 && nextNormalPos - startPos < 600 ? nextNormalPos : startPos + 600;
+        const segment = text.substring(startPos, segmentEnd);
 
-        if (!values[testName] && !isNaN(value)) {
-            let status = 'normal';
-            if (value < lowRange) status = 'low';
-            else if (value > highRange) status = 'high';
+        // Extract all numbers from the segment
+        const allNumbers = [...segment.matchAll(/([\d.]+)/g)].map(m => parseFloat(m[1]));
 
-            values[testName] = {
-                value: value,
-                unit: unit,
-                range: `${lowRange} - ${highRange}`,
-                status: status
-            };
-            console.log(`  ✓ ${testName}: ${value} ${unit} (visual chart pattern)`);
+        // Filter out:
+        // 1. Numbers that equal the range boundaries
+        // 2. Numbers that are less than lowRange (descriptive text like "< 20")
+        // 3. Numbers that are exactly between boundaries mentioned in descriptive text
+        const candidateValues = allNumbers.filter(num => {
+            // Skip range boundaries
+            if (num === lowRange || num === highRange) return false;
+            // Skip numbers below the low range (from "< 20" or "20 to 29" descriptions)
+            if (num < lowRange) return false;
+            return true;
+        });
+
+        // The first remaining number is the actual value
+        if (candidateValues.length > 0) {
+            const value = candidateValues[0];
+
+            // Clean test name
+            testName = testName
+                .replace(/^(New|Old|Final|Preliminary)\s+/i, '')
+                .replace(/\s{2,}/g, ' ')
+                .trim();
+
+            if (!values[testName] && !isNaN(value)) {
+                let status = 'normal';
+                if (value < lowRange) status = 'low';
+                else if (value > highRange) status = 'high';
+
+                values[testName] = {
+                    value: value,
+                    unit: unit,
+                    range: `${lowRange} - ${highRange}`,
+                    status: status
+                };
+                console.log(`  ✓ ${testName}: ${value} ${unit} (visual chart pattern, filtered from ${allNumbers.length} numbers)`);
+            }
+        } else {
+            console.log(`  ⚠️ Visual chart pattern matched "${testName}" but no valid value found after filtering`);
         }
     }
 
