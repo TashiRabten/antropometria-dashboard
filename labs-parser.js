@@ -275,7 +275,7 @@ function parseMyChartSingle(labInfo, text) {
 
     // Extract lab type from title
     // First try specific known patterns
-    const titleMatch = text.match(/(COMPREHENSIVE METABOLIC PANEL|CBC W.*?DIFFERENTIAL|HEMOGLOBIN A1C|A1C|IRON AND TOTAL IRON BINDING|LIPID PANEL|VITAMIN B-?12|B-?12|FERRITIN|FOLATE|C-REACTIVE PROTEIN|THIAMINE|B-?1)/i);
+    const titleMatch = text.match(/(COMPREHENSIVE METABOLIC PANEL|CBC W.*?DIFFERENTIAL|HEMOGLOBIN A1C|A1C|IRON AND TOTAL IRON BINDING|LIPID PANEL|25-OH VITAMIN D|VITAMIN D|VITAMIN C|VITAMIN B-?12|B-?12|FERRITIN|FOLATE|C-REACTIVE PROTEIN|THIAMINE|B-?1)/i);
     if (titleMatch) {
         console.log('🏷️ Título específico encontrado:', titleMatch[1]);
         const title = titleMatch[1];
@@ -284,6 +284,8 @@ function parseMyChartSingle(labInfo, text) {
         else if (title.match(/HEMOGLOBIN A1C|A1C/i)) labInfo.labType = 'A1C';
         else if (title.match(/IRON/i)) labInfo.labType = 'Ferro';
         else if (title.match(/LIPID/i)) labInfo.labType = 'Lipídios';
+        else if (title.match(/VITAMIN D|25-OH VITAMIN D/i)) labInfo.labType = 'Vitamina D';
+        else if (title.match(/VITAMIN C/i)) labInfo.labType = 'Vitamina C';
         else if (title.match(/\bB-?12\b/i)) labInfo.labType = 'B12';
         else if (title.match(/\bB-?1\b/i) && !title.match(/B-?12/i)) labInfo.labType = 'B1';
         else if (title.includes('FERRITIN')) labInfo.labType = 'Ferritina';
@@ -566,6 +568,95 @@ function extractMyChartSingleValues(text) {
                 status: status
             };
             console.log(`  ✓ ${testName}: ${value} ${unit} (${status})`);
+        }
+    }
+
+    // Pattern 6: Value on own line before visual chart
+    // Format: "Test Name\nNormal range: X - Y unit\n\nVALUE\nX   Y"
+    // The value appears as a standalone number between the range and the visual chart
+    const visualChartPattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]+?)\s+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)[\s\n]+([\d.]+)\s+[\d.]+\s+[\d.]+/gi;
+
+    while ((match = visualChartPattern.exec(text)) !== null) {
+        let testName = match[1].trim();
+        const lowRange = parseFloat(match[2]);
+        const highRange = parseFloat(match[3]);
+        const unit = match[4];
+        const value = parseFloat(match[5]);
+
+        // Skip if value is the same as range boundaries (likely part of chart)
+        if (value === lowRange || value === highRange) continue;
+
+        // Skip if test name has excessive whitespace (likely spanning two columns)
+        if (/\s{5,}/.test(testName)) {
+            console.log(`  ⚠️ Skipping "${testName}" - excessive whitespace (two-column layout)`);
+            continue;
+        }
+
+        // Clean test name
+        testName = testName
+            .replace(/^(New|Old|Final|Preliminary)\s+/i, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+
+        if (!values[testName] && !isNaN(value)) {
+            let status = 'normal';
+            if (value < lowRange) status = 'low';
+            else if (value > highRange) status = 'high';
+
+            values[testName] = {
+                value: value,
+                unit: unit,
+                range: `${lowRange} - ${highRange}`,
+                status: status
+            };
+            console.log(`  ✓ ${testName}: ${value} ${unit} (visual chart pattern)`);
+        }
+    }
+
+    // Pattern 7: "Value" keyword on one line, number on next line
+    // Format: "Test Name\nNormal range: X - Y unit\n\nValue\n123"
+    // Important: Test name should NOT span multiple lines (to avoid two-column layouts)
+    const splitValuePattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]{2,60}?)\s+Normal\s+(?:range|value):\s*(?:below\s*<?|above\s*>?)?\s*([\d.]+)(?:\s*-\s*([\d.]+))?\s+([A-Za-z\/]+)[\s\S]{0,50}?Value\s+([\d.]+)/gi;
+
+    while ((match = splitValuePattern.exec(text)) !== null) {
+        let testName = match[1].trim();
+        const lowRange = match[2] ? parseFloat(match[2]) : null;
+        const highRange = match[3] ? parseFloat(match[3]) : null;
+        const unit = match[4];
+        const value = parseFloat(match[5]);
+
+        // Skip if test name has excessive whitespace (likely spanning two columns)
+        if (/\s{5,}/.test(testName)) {
+            console.log(`  ⚠️ Skipping "${testName}" - excessive whitespace (two-column layout)`);
+            continue;
+        }
+
+        // Clean test name
+        testName = testName
+            .replace(/^(New|Old|Final|Preliminary)\s+/i, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+
+        if (!values[testName] && !isNaN(value)) {
+            let status = 'normal';
+            let range = '';
+
+            if (lowRange !== null && highRange !== null) {
+                range = `${lowRange} - ${highRange}`;
+                if (value < lowRange) status = 'low';
+                else if (value > highRange) status = 'high';
+            } else if (lowRange !== null) {
+                range = `< ${lowRange}`;
+                status = value < lowRange ? 'normal' : 'high';
+            }
+
+            values[testName] = {
+                value: value,
+                unit: unit,
+                range: range,
+                status: status
+            };
+            console.log(`  ✓ ${testName}: ${value} ${unit} (split Value pattern)`);
         }
     }
 
