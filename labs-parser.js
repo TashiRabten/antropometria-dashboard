@@ -572,9 +572,10 @@ function extractMyChartSingleValues(text) {
     }
 
     // Pattern 6: Value on own line before visual chart
-    // Format: "Test Name\nNormal range: X - Y unit\n\nVALUE\nX   Y"
+    // Format: "Test Name\nNormal range: X - Y unit\n\nVALUE\nX\n\nY"
     // The value appears as a standalone number between the range and the visual chart
-    const visualChartPattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]+?)\s+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)[\s\n]+([\d.]+)\s+[\d.]+\s+[\d.]+/gi;
+    // Just look for first number after the unit (the actual test value)
+    const visualChartPattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]{3,50}?)\s+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)\s+(\d+\.?\d*)/gi;
 
     while ((match = visualChartPattern.exec(text)) !== null) {
         let testName = match[1].trim();
@@ -584,7 +585,10 @@ function extractMyChartSingleValues(text) {
         const value = parseFloat(match[5]);
 
         // Skip if value is the same as range boundaries (likely part of chart)
-        if (value === lowRange || value === highRange) continue;
+        if (value === lowRange || value === highRange) {
+            console.log(`  ⚠️ Skipping visual chart match - value ${value} equals range boundary`);
+            continue;
+        }
 
         // Skip if test name has excessive whitespace (likely spanning two columns)
         if (/\s{5,}/.test(testName)) {
