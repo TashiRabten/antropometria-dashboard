@@ -1183,42 +1183,75 @@ function parseMyChartPeriod(labInfo, text) {
 // Extract dates from text (format: M/D/YY or MM/DD/YYYY)
 // IMPORTANT: Exclude DOB (Date of Birth) which appears near patient info
 
+// Extract dates from text (format: M/D/YY or MM/DD/YYYY)
+// IMPORTANT: Exclude DOB (Date of Birth) which appears near patient info
+
 // First, find DOB so we can exclude it
 const dobMatch = text.match(/(?:DOB|Date of Birth|Birth Date)[:\s]*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
-let dobDate = null;
+let dobDateStr = null;
 if (dobMatch) {
-    let year = parseInt(dobMatch[3]);
-    if (year < 100) year += year < 50 ? 2000 : 1900;
-    dobDate = new Date(year, parseInt(dobMatch[1]) - 1, parseInt(dobMatch[2]));
-    console.log(`🎂 DOB encontrado: ${dobDate.toLocaleDateString()} - será excluído`);
+    dobDateStr = `${dobMatch[1]}/${dobMatch[2]}/${dobMatch[3]}`;
+    console.log(`🎂 DOB encontrado: ${dobDateStr} - será excluído`);
 }
 
 // Look for the header row with "Standard Range" followed by dates
+let headerDates = [];
 const headerMatch = text.match(/Standard Range\s+((?:\d{1,2}\/\d{1,2}\/\d{2,4}\s*){2,})/);
+
 if (headerMatch) {
     const dateStr = headerMatch[1];
     const dateMatches = [...dateStr.matchAll(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/g)];
     
-    headerDates = dateMatches.map(m => {
-        let year = parseInt(m[3]);
-        if (year < 100) year += year < 50 ? 2000 : 1900;
-        const month = parseInt(m[1]) - 1; // JS months are 0-indexed
-        const day = parseInt(m[2]);
-        return new Date(year, month, day);
-    }).filter(d => {
-        // Exclude DOB and invalid dates
-        if (dobDate && Math.abs(d.getTime() - dobDate.getTime()) < 86400000) return false;
-        if (isNaN(d.getTime())) return false;
-        
-        const now = new Date();
-        const fiftyYearsAgo = new Date(now.getFullYear() - 50, 0, 1);
-        return d >= fiftyYearsAgo && d <= now;
-    });
+    console.log(`🔍 Found ${dateMatches.length} date patterns in header`);
     
-    console.log(`📅 ${headerDates.length} datas de exame encontradas no cabeçalho`);
+    headerDates = dateMatches
+        .map(m => {
+            const originalStr = `${m[1]}/${m[2]}/${m[3]}`;
+            let year = parseInt(m[3]);
+            
+            // Convert 2-digit year to 4-digit
+            if (year < 100) {
+                year += year < 50 ? 2000 : 1900;
+            }
+            
+            const month = parseInt(m[1]) - 1; // JS months are 0-indexed
+            const day = parseInt(m[2]);
+            const dateObj = new Date(year, month, day);
+            
+            return { originalStr, dateObj };
+        })
+        .filter(({ originalStr, dateObj }) => {
+            // Exclude DOB by comparing original string
+            if (dobDateStr && originalStr === dobDateStr) {
+                console.log(`  ⊗ Excluindo DOB: ${originalStr}`);
+                return false;
+            }
+            
+            // Exclude invalid dates
+            if (isNaN(dateObj.getTime())) {
+                console.log(`  ⊗ Excluindo data inválida: ${originalStr}`);
+                return false;
+            }
+            
+            // Only keep dates from last 50 years and not in future
+            const now = new Date();
+            const fiftyYearsAgo = new Date(now.getFullYear() - 50, 0, 1);
+            if (dateObj < fiftyYearsAgo || dateObj > now) {
+                console.log(`  ⊗ Excluindo data fora do intervalo: ${originalStr} (${dateObj.toLocaleDateString()})`);
+                return false;
+            }
+            
+            console.log(`  ✓ Mantendo data: ${originalStr} (${dateObj.toLocaleDateString('pt-BR')})`);
+            return true;
+        })
+        .map(({ dateObj }) => dateObj);
+    
+    console.log(`📅 ${headerDates.length} datas válidas encontradas no cabeçalho`);
+} else {
+    console.log('⚠️ Header pattern not matched');
 }
 
-    labInfo.dates = headerDates;
+labInfo.dates = headerDates;
 
     // Extract multi-date values
     labInfo.values = extractPeriodValues(text, headerDates);
@@ -1440,19 +1473,20 @@ function parseFollowMyHealth(labInfo, text) {
 
     return labInfo;
 }// Replace extractFollowMyHealthValues function with this approach:
-
 function extractFollowMyHealthValues(text) {
     const values = {};
 
     console.log('🔍 Extraindo valores do formato Follow My Health...');
 
-    // Follow My Health has tabular data, but when extracted as text,
-    // each row appears as: TestName Date Value Unit Range Source
-    // Strategy: Find lines with the test name, extract the numeric value and range
+    // Follow My Health text often comes as long lines with multiple spaces as separators
+    // Split by multiple spaces (3+) to get individual cells
+    const cells = text.split(/\s{3,}/).filter(c => c.trim().length > 0);
+    
+    console.log(`🔍 FMH: Split into ${cells.length} cells`);
 
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
-    // Common test names in Follow My Health
+    // Pattern: TestName, Date, Value, Unit, Range, Source
+    // We need to find sequences that match this pattern
+    
     const testNames = [
         'WBC', 'RBC', 'HEMOGLOBIN (HGB)', 'HEMATOCRIT (HCT)', 
         'MCV', 'MCH', 'MCHC', 'RDW-SD', 'PLT', 'MPV',
@@ -1464,89 +1498,78 @@ function extractFollowMyHealthValues(text) {
         'IRON', '% SATURATION', 'FERRITIN', 'TIBC'
     ];
 
-    for (const testName of testNames) {
-        // Find line containing this test name
-        const lineIndex = lines.findIndex(line => {
-            // Exact match or starts with test name
-            return line === testName || line.startsWith(testName + ' ');
-        });
-
-        if (lineIndex === -1) continue;
-
-        // The value and range are in the following lines
-        // Pattern: next lines contain date, then value, then unit, then range
-        let foundValue = null;
-        let foundUnit = '';
-        let foundRange = '';
-
-        for (let j = lineIndex + 1; j < Math.min(lineIndex + 8, lines.length); j++) {
-            const line = lines[j];
-
-            // Skip date lines (MM/DD/YYYY)
-            if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(line)) continue;
-
-            // Skip source line
-            if (line.includes('myHealth@SC')) break;
-
-            // If we haven't found the value yet, check if this line is a number
-            if (foundValue === null) {
-                const numMatch = line.match(/^([\d.]+)$/);
-                if (numMatch) {
-                    foundValue = parseFloat(numMatch[1]);
-                    continue;
+    for (let i = 0; i < cells.length; i++) {
+        const cell = cells[i];
+        
+        // Check if this cell is a test name
+        const matchedTest = testNames.find(test => cell.toUpperCase().includes(test.toUpperCase()));
+        
+        if (matchedTest) {
+            // Next cells should be: date, value, unit, range, source
+            // Skip to the value (skip date in MM/DD/YYYY format)
+            let valueIndex = i + 1;
+            
+            // Skip date cell
+            if (valueIndex < cells.length && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cells[valueIndex])) {
+                valueIndex++;
+            }
+            
+            // Get value
+            if (valueIndex < cells.length) {
+                const valueStr = cells[valueIndex];
+                const value = parseFloat(valueStr);
+                
+                if (!isNaN(value)) {
+                    let unit = '';
+                    let range = '';
+                    
+                    // Next cell might be unit (like "K/UL", "G/DL", "%")
+                    if (valueIndex + 1 < cells.length) {
+                        const nextCell = cells[valueIndex + 1];
+                        if (/^[A-Z\/%]+$/.test(nextCell) && nextCell.length < 10 && !nextCell.includes('myHealth')) {
+                            unit = nextCell;
+                            
+                            // Next cell should be range
+                            if (valueIndex + 2 < cells.length) {
+                                const rangeCell = cells[valueIndex + 2];
+                                if (/^[\d.\-<>]+$/.test(rangeCell)) {
+                                    range = rangeCell;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Determine status from range
+                    let status = 'normal';
+                    const rangeMatch = range.match(/([\d.]+)-([\d.]+)/);
+                    if (rangeMatch) {
+                        const low = parseFloat(rangeMatch[1]);
+                        const high = parseFloat(rangeMatch[2]);
+                        if (value < low) status = 'low';
+                        else if (value > high) status = 'high';
+                    }
+                    
+                    // Normalize test name for display
+                    let displayName = matchedTest.replace(' (HGB)', '').replace(' (HCT)', '');
+                    if (displayName.startsWith('ABS ')) {
+                        displayName = displayName.replace('ABS ', '') + ' Abs';
+                    }
+                    
+                    values[displayName] = {
+                        value: value,
+                        unit: unit,
+                        range: range,
+                        status: status
+                    };
+                    console.log(`  ✓ ${displayName}: ${value} ${unit} (${status}) [Range: ${range}]`);
                 }
             }
-
-            // If we have the value but not the unit, check for unit
-            if (foundValue !== null && !foundUnit) {
-                // Unit lines are typically short uppercase with /
-                if (/^[A-Z\/%]+$/.test(line) && line.length < 10) {
-                    foundUnit = line;
-                    continue;
-                }
-            }
-
-            // If we have value and unit, look for range
-            if (foundValue !== null && foundUnit && !foundRange) {
-                // Range patterns: "X-Y" or "<X" or ">X"
-                if (/^[\d.\-<>]+$/.test(line)) {
-                    foundRange = line;
-                    break;
-                }
-            }
-        }
-
-        if (foundValue !== null && !isNaN(foundValue)) {
-            // Determine status from range
-            let status = 'normal';
-            const rangeMatch = foundRange.match(/([\d.]+)-([\d.]+)/);
-            if (rangeMatch) {
-                const low = parseFloat(rangeMatch[1]);
-                const high = parseFloat(rangeMatch[2]);
-                if (foundValue < low) status = 'low';
-                else if (foundValue > high) status = 'high';
-            }
-
-            // Normalize test name for display
-            let displayName = testName.replace(' (HGB)', '').replace(' (HCT)', '');
-            if (displayName.startsWith('ABS ')) {
-                displayName = displayName.replace('ABS ', '') + ' Abs';
-            }
-
-            values[displayName] = {
-                value: foundValue,
-                unit: foundUnit,
-                range: foundRange,
-                status: status
-            };
-            console.log(`  ✓ ${displayName}: ${foundValue} ${foundUnit} (${status}) [Range: ${foundRange}]`);
         }
     }
 
     console.log(`📊 Total: ${Object.keys(values).length} valores extraídos (Follow My Health)`);
     return values;
 }
-
 
 // Parse Memorial Health Format (clean OCR'd lab reports)
 function parseMemorialHealth(labInfo, text) {
