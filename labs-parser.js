@@ -1321,9 +1321,9 @@ function extractUIHealthValues(text) {
     // Words that indicate headers, not test names
     const headerWords = ['PATIENT', 'ORDER', 'LABORATORY', 'DEMOGRAPHICS', 'INFORMATION',
                          'PANEL', 'COMPREHENSIVE', 'METABOLIC', 'DIFFERENTIAL', 'ENDOCRINOLOGY',
-                         'LIPID', 'PROTEIN', 'MARKERS', 'CBC', 'CLIENT', 'PROVIDER', 'ACCESSION',
+                          'MARKERS', 'CBC', 'CLIENT', 'PROVIDER', 'ACCESSION',
                          'AGE', 'SEX', 'DOB', 'NAME', 'MR #', 'ACCOUNT', 'PENDING', 'COLLECTED',
-                         'RECEIVED', 'REPORTED', 'ORDERING', 'TOTAL', 'STANDARD', 'RANGE', 'RESULT'];
+                         'RECEIVED', 'REPORTED', 'ORDERING', 'STANDARD', 'RANGE', 'RESULT'];
 
 
     // Pattern 2: TestName: Value UNIT (Ref: range) - sem High/Low
