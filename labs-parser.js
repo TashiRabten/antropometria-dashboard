@@ -1084,21 +1084,25 @@ function extractUIHealthValues(text) {
     const segments = text.split(/\s{2,}|\n/).filter(s => s.trim());
 
     // Also try regex matching directly on the full text for better results
+    // Test name can start with letter, number, or % (like "% Immature Platelet")
     // Test name should be 2-50 chars, not contain header words
+    // Unit pattern matches: MG/DL, NG/ML, K/UL, %, GM/DL, FL, PG, etc.
+
     // Pattern 1: TestName: Value UNIT (High/Low) (Ref: range)
-    const pattern1 = /([A-Za-z][A-Za-z\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Z\/\*%0-9]+)\s+\((?:High|Low)\)\s+\(Ref:\s*([^)]+)\)/gi;
+    const pattern1 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Za-z\/\*%0-9]+)\s+\((?:High|Low)\)\s+\(Ref:\s*([^)]+)\)/gi;
 
     // Pattern 2: TestName: Value UNIT (Ref: range) - without High/Low
-    const pattern2 = /([A-Za-z][A-Za-z\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Z\/\*%0-9]+)\s+\(Ref:\s*([^)]+)\)/gi;
+    const pattern2 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Za-z\/\*%0-9]+)\s+\(Ref:\s*([^)]+)\)/gi;
 
     // Pattern 3: TestName: Value UNIT (no ref range)
-    const pattern3 = /([A-Za-z][A-Za-z\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Z\/\*%0-9]+)(?:\s|$)/gi;
+    const pattern3 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Za-z\/\*%0-9]+)(?:\s|$)/gi;
 
     // Words that indicate headers, not test names
     const headerWords = ['PATIENT', 'ORDER', 'LABORATORY', 'DEMOGRAPHICS', 'INFORMATION',
                          'PANEL', 'COMPREHENSIVE', 'METABOLIC', 'DIFFERENTIAL', 'ENDOCRINOLOGY',
                          'LIPID', 'PROTEIN', 'MARKERS', 'CBC', 'CLIENT', 'PROVIDER', 'ACCESSION',
-                         'AGE', 'SEX', 'DOB', 'NAME', 'MR #', 'ACCOUNT'];
+                         'AGE', 'SEX', 'DOB', 'NAME', 'MR #', 'ACCOUNT', 'PENDING', 'COLLECTED',
+                         'RECEIVED', 'REPORTED', 'ORDERING'];
 
     let match;
 
@@ -1206,44 +1210,79 @@ function extractPeriodValues(text, dates) {
 
     // Period format: TestName  Range Unit  Value1  Value2  Value3...
     // Example: "Basophils Absolute  0.0 - 0.2 10*3/uL  0.0   0.1   0.1   0.1"
+    // Example: "Chol/HDL Ratio  <5.0  10.9 H   9.5 H   7.0"
 
     // Period format tests - look for known test names followed by range and values
     const periodTests = [
+        // CBC tests
         'Hemoglobin', 'Hematocrit', 'RBC', 'WBC', 'Platelets', 'Platelet Count',
         'MCV', 'MCH', 'MCHC', 'RDW', 'RDW-CV', 'RDW-SD', 'MPV',
-        'Neutrophils Absolute', 'Neutrophils Relative',
-        'Lymphocytes Absolute', 'Lymphocytes Relative',
-        'Monocytes Absolute', 'Monocytes Relative',
-        'Eosinophils Absolute', 'Eosinophils Relative',
-        'Basophils Absolute', 'Basophils Relative',
-        'Absolute Immature Granulocytes',
-        'Sodium', 'Potassium', 'Chloride', 'CO2', 'Glucose',
-        'BUN', 'Creatinine', 'Calcium', 'eGFR',
-        'Total Protein', 'Albumin', 'Globulin', 'Albumin/Globulin Ratio',
-        'AST', 'ALT', 'Alkaline Phosphatase', 'Total Bilirubin', 'Anion Gap'
+        'Neutrophils Absolute', 'Neutrophils Relative', 'Neutrophils',
+        'Lymphocytes Absolute', 'Lymphocytes Relative', 'Lymphocytes',
+        'Monocytes Absolute', 'Monocytes Relative', 'Monocytes',
+        'Eosinophils Absolute', 'Eosinophils Relative', 'Eosinophils',
+        'Basophils Absolute', 'Basophils Relative', 'Basophils',
+        'Absolute Immature Granulocytes', 'Immature Granulocytes',
+        // CMP tests
+        'Sodium', 'Potassium', 'Chloride', 'CO2', 'Glucose', 'Carbon Dioxide',
+        'BUN', 'Blood Urea Nitrogen', 'Creatinine', 'Calcium', 'eGFR',
+        'Total Protein', 'Albumin', 'Globulin', 'Albumin/Globulin Ratio', 'A/G Ratio',
+        'AST', 'ALT', 'Alkaline Phosphatase', 'Alk Phos', 'Total Bilirubin', 'Bilirubin',
+        'Anion Gap', 'BUN/Creatinine Ratio',
+        // Lipid tests
+        'Cholesterol', 'Total Cholesterol', 'Triglycerides', 'HDL', 'LDL',
+        'HDL Cholesterol', 'LDL Cholesterol', 'VLDL', 'VLDL Cholesterol',
+        'Chol/HDL Ratio', 'LDL/HDL Ratio', 'Non-HDL Cholesterol',
+        // Thyroid tests
+        'TSH', 'T3', 'T4', 'Free T3', 'Free T4', 'T3 Free', 'T4 Free',
+        // Other tests
+        'CK', 'Total CK', 'Creatine Kinase'
     ];
 
     for (const testName of periodTests) {
-        // Look for test name followed by range (X - Y or X-Y) then unit then values
+        // Look for test name followed by range then values
         const escapedName = testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-        // Pattern: TestName  Range  Unit  Values...
+        // Pattern 1: TestName  Range (X - Y)  Unit  Values...
         // Example: "Basophils Absolute  0.0 - 0.2 10*3/uL  0.0   0.1   0.1   0.1"
-        // We need to skip the range and unit, then capture the values
-        const pattern = new RegExp(
+        const pattern1 = new RegExp(
             escapedName +
             '\\s+' +                                    // whitespace
-            '[\\d.]+\\s*-\\s*[\\d.]+\\s*' +            // range like "0.0 - 0.2"
-            '[A-Za-z\\*\\/\\d%]+\\s+' +                 // unit like "10*3/uL"
+            '([\\d.]+\\s*-\\s*[\\d.]+)\\s*' +          // range like "0.0 - 0.2"
+            '([A-Za-z\\*\\/\\d%]+)?\\s*' +             // optional unit like "10*3/uL"
             '([\\d.]+(?:\\s*[HL])?(?:\\s+[\\d.]+(?:\\s*[HL])?)*)',  // values
             'i'
         );
 
-        const match = text.match(pattern);
+        // Pattern 2: TestName  Range (<X or >X)  Values...
+        // Example: "Chol/HDL Ratio  <5.0  10.9 H   9.5 H"
+        const pattern2 = new RegExp(
+            escapedName +
+            '\\s+' +                                    // whitespace
+            '([<>][\\d.]+)\\s+' +                      // range like "<5.0" or ">40"
+            '([\\d.]+(?:\\s*[HL])?(?:\\s+[\\d.]+(?:\\s*[HL])?)*)',  // values
+            'i'
+        );
+
+        let match = text.match(pattern1);
+        let range = '';
+        let unit = '';
+        let valuesStr = '';
 
         if (match) {
+            range = match[1];
+            unit = match[2] || '';
+            valuesStr = match[3];
+        } else {
+            match = text.match(pattern2);
+            if (match) {
+                range = match[1];
+                valuesStr = match[2];
+            }
+        }
+
+        if (match && valuesStr) {
             // Extract all numbers from the matched group
-            const valuesStr = match[1];
             const valueMatches = [...valuesStr.matchAll(/([\d.]+)\s*([HL])?/g)];
 
             if (valueMatches.length > 0) {
@@ -1265,8 +1304,8 @@ function extractPeriodValues(text, dates) {
 
                 if (dataPoints.length > 0) {
                     values[testName] = {
-                        unit: '',
-                        range: '',
+                        unit: unit,
+                        range: range,
                         dataPoints: dataPoints
                     };
                     console.log(`  ✓ ${testName}: ${dataPoints.length} valores`);
@@ -1275,6 +1314,53 @@ function extractPeriodValues(text, dates) {
         }
     }
 
+    // Also try generic pattern to catch any remaining tests
+    // Pattern: TestName  RangeOrValue  Value1 H/L  Value2 H/L...
+    const genericPattern = /([A-Za-z][A-Za-z\s\/\-]+?)\s{2,}([<>]?[\d.]+(?:\s*-\s*[\d.]+)?)\s+([A-Za-z\*\/\d%]*)\s*([\d.]+(?:\s*[HL])?(?:\s+[\d.]+(?:\s*[HL])?)+)/gi;
+
+    let genericMatch;
+    while ((genericMatch = genericPattern.exec(text)) !== null) {
+        let testName = cleanTestName(genericMatch[1]);
+        const range = genericMatch[2];
+        const unit = genericMatch[3] || '';
+        const valuesStr = genericMatch[4];
+
+        // Skip if already found or is a header
+        if (values[testName] || !testName || testName.length < 2) continue;
+        const upperName = testName.toUpperCase();
+        if (['NAME', 'STANDARD', 'RANGE', 'RESULT', 'DATE'].some(h => upperName.includes(h))) continue;
+
+        const valueMatches = [...valuesStr.matchAll(/([\d.]+)\s*([HL])?/g)];
+
+        if (valueMatches.length > 1) {  // Need at least 2 values for period format
+            const dataPoints = [];
+
+            for (let j = 0; j < Math.min(valueMatches.length, dates.length); j++) {
+                const value = parseFloat(valueMatches[j][1]);
+                const flag = valueMatches[j][2];
+                const status = flag === 'H' ? 'high' : flag === 'L' ? 'low' : 'normal';
+
+                if (!isNaN(value) && dates[j]) {
+                    dataPoints.push({
+                        date: dates[j],
+                        value: value,
+                        status: status
+                    });
+                }
+            }
+
+            if (dataPoints.length > 1) {
+                values[testName] = {
+                    unit: unit,
+                    range: range,
+                    dataPoints: dataPoints
+                };
+                console.log(`  ✓ ${testName}: ${dataPoints.length} valores (generic)`);
+            }
+        }
+    }
+
+    console.log(`📊 Total: ${Object.keys(values).length} testes com múltiplos valores`);
     return values;
 }
 
