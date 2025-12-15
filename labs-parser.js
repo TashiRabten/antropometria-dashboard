@@ -1320,7 +1320,7 @@ function extractUIHealthValues(text) {
 
     // Pattern 2: TestName: Value UNIT (Ref: range) - sem High/Low
     console.log('\n🔍 Tentando Pattern 2 (sem High/Low)...');
-    const pattern2 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,70}?):\s*([\d.]+)\s+([A-Za-z][A-Za-z\/\*%0-9]+)\s+\(Ref:\s*([^)]+)\)/gi;
+    const pattern2 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Za-z][A-Za-z\/\*%0-9]+)\s+\(Ref:\s*([^)]+)\)/gi;
     let match;
 
     let matchCount2 = 0;
@@ -1384,12 +1384,13 @@ function extractUIHealthValues(text) {
 
     // Pattern 1: TestName: Value UNIT (High/Low) (Ref: range)
     console.log('\n🔍 Tentando Pattern 1 (com High/Low)...');
-    const pattern1 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,70}?):\s*([\d.]+)\s+([A-Za-z][A-Za-z\/\*%0-9]+)\s+\((?:High|Low)\)\s+\(Ref:\s*([^)]+)\)/gi;
+    const pattern1 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Za-z][A-Za-z\/\*%0-9]+)\s+\((?:High|Low)\)\s+\(Ref:\s*([^)]+)\)/gi;
 
     let matchCount1 = 0;
     while ((match = pattern1.exec(text)) !== null) {
         matchCount1++;
         const testName = cleanTestName(match[1]);
+        if (/\s{2,}/.test(match[1])) continue; 
         const value = parseFloat(match[2]);
         const unit = match[3];
         const refRange = match[4].trim();
@@ -1437,12 +1438,13 @@ function extractUIHealthValues(text) {
 
     // Pattern 3: TestName: Value UNIT (no ref range)
     console.log('\n🔍 Tentando Pattern 3 (sem ref range)...');
-    const pattern3 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,70}?):\s*([\d.]+)\s+([A-Za-z][A-Za-z\/\*%0-9]+)(?:\s|$)/gi;
+    const pattern3 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Za-z][A-Za-z\/\*%0-9]+)(?:\s|$)/gi;
 
     let matchCount3 = 0;
     while ((match = pattern3.exec(text)) !== null) {
         matchCount3++;
         const testName = cleanTestName(match[1]);
+        if (/\s{2,}/.test(match[1])) continue;
         const value = parseFloat(match[2]);
         const unit = match[3];
 
@@ -1943,6 +1945,7 @@ function extractPeriodValues(text, dates) {
     let genericMatch;
     while ((genericMatch = genericPattern.exec(text)) !== null) {
         let testName = cleanTestName(genericMatch[1]);
+        if (/\s{2,}/.test(match[1])) continue;  
         const range = genericMatch[2];
         const unit = genericMatch[3] || '';
         const valuesStr = genericMatch[4];
