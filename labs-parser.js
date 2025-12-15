@@ -1252,7 +1252,7 @@ if (headerMatch) {
 }
 
 // Converter datas para timestamps antes de salvar
-    labInfo.dates = headerDates.map(d => d.getTime());
+    labInfo.dates = headerDates;
 
 if (labInfo.dates && labInfo.dates.length > 0) {
     labInfo.collectionDate = labInfo.dates[labInfo.dates.length - 1];
@@ -1865,7 +1865,7 @@ function extractPeriodValues(text, dates) {
 
                     if (!isNaN(value) && dates[j]) {
                         dataPoints.push({
-                            date: dates[j].getTime(),
+                            date: dates[j],
                             value: value,
                             status: status
                         });
@@ -2411,7 +2411,8 @@ function displayExtractedValues(values) {
                             ${data.dataPoints.map(dp => {
                                 const dpAbnormal = dp.status && dp.status !== 'normal';
                                 const dpStatusClass = dp.status || 'normal';
-                                const dateStr = dp.date ? new Date(dp.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'}) : '';                                return `<div class="datapoint-item ${dpAbnormal ? 'abnormal' : ''}">
+                                const dateStr = dp.date ? (dp.date.toDate ? dp.date.toDate() : new Date(dp.date)).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'}) : '';
+                                return `<div class="datapoint-item ${dpAbnormal ? 'abnormal' : ''}">
                                     <span class="dp-date">${dateStr}</span>
                                     <span class="dp-value ${dpStatusClass}">${dp.value}</span>
                                 </div>`;
