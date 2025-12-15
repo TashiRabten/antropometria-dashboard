@@ -452,8 +452,12 @@ function extractMyChartSingleValues(text) {
             .replace(/^(New|Old|Final|Preliminary)\s+/i, '')  // Remove status prefixes
             .replace(/\s*(PM|AM)\s+Page\s+\d+\s+of\s+\d+\s*/gi, '')  // Remove page numbers
             .replace(/[\r\n]+/g, ' ')  // Replace newlines with spaces
-            .replace(/^(mg\/dL|ug\/dL|mmol\/L|g\/dL|%)\s+/i, '')  // Remove unit prefix
+            .replace(/^[\d.]+\s*(?:mg\/dL|ug\/dL|mmol\/L|g\/dL|mL\/min\/m2|U\/L|%)\s*/gi, '')  // Remove "61 U/L" prefix
+            .replace(/^(mg\/dL|ug\/dL|mmol\/L|g\/dL|mL\/min|U\/L|%)\s+/i, '')  // Remove unit prefix
+            .replace(/^m2\s+/i, '')  // Remove "m2" unit fragment
+            .replace(/^Value\s+[\d.]+\s*/gi, '')  // Remove "Value 21" prefix
             .replace(/^(Value|High|Low|H|L)\s+[\d.]+\s+/gi, '')  // Remove status + value
+            .replace(/^[\d.]+\s+(?=\D)/g, '')  // Remove leading numbers like "99 eGFR" -> "eGFR"
             .replace(/^(or greater|or less)\s+/i, '')  // Remove "or greater", "or less"
             .replace(/.*?(MD|DO|PA|NP)\s*\([^)]*\)\s*/gi, '')  // Remove "MD (Lab director)"
             .replace(/^(High|Low)\s+/i, '')  // Remove status prefix
@@ -462,12 +466,37 @@ function extractMyChartSingleValues(text) {
 
         console.log(`  📌 Match ${matchCount}: "${testName}" | Range: ${lowRange}-${highRange} ${unit}`);
 
+        // Skip if test name is empty after cleaning
+        if (!testName || testName.length < 2) {
+            console.log(`  ⚠️ Skipping - test name too short after cleaning`);
+            continue;
+        }
+
+        // Skip if this exact test name already exists
+        if (values[testName]) {
+            console.log(`  ⚠️ Skipping "${testName}" - already parsed`);
+            continue;
+        }
+
         // Skip if this test name is a suffix of an already-parsed test
         // Example: Skip "OH Vitamin D, Total" if "25-OH Vitamin D, Total" exists
         const isPartialMatch = Object.keys(values).some(existing => existing.endsWith(testName));
         if (isPartialMatch) {
             console.log(`  ⚠️ Skipping "${testName}" - is a suffix of an already-parsed test`);
             continue;
+        }
+
+        // Also check if there's a version with digit prefix that we should prefer
+        // Look back in text to see if this test name has a digit prefix like "25-"
+        const testNamePos = text.indexOf(testName);
+        if (testNamePos > 0) {
+            const prefixCheck = text.substring(Math.max(0, testNamePos - 10), testNamePos);
+            const digitPrefix = prefixCheck.match(/(\d+-)$/);
+            if (digitPrefix) {
+                const fullName = digitPrefix[1] + testName;
+                console.log(`  ⚠️ Found digit prefix "${digitPrefix[1]}" - should use "${fullName}" instead`);
+                testName = fullName;
+            }
         }
 
         // Find the value - it's the last number before the next test name or end
@@ -478,10 +507,16 @@ function extractMyChartSingleValues(text) {
 
         console.log(`  📝 Segment para buscar valor: "${segment.substring(0, 60)}..."`);
 
-        // Find all numbers in this segment
-        const numbers = [...segment.matchAll(/([\d.]+)\s*(High|Low|H|L)?/gi)];
+        // Clean segment: remove description text that contains misleading numbers
+        // Patterns like "< 20 ng/mL: Deficiency" or "20 to 29 ng/mL: Insufficiency"
+        const cleanedSegment = segment
+            .replace(/<?>\s*\d+\s*ng\/mL[:\s]*(?:Deficiency|Insufficiency|Sufficiency|Toxicity|Optimal|Normal)[^0-9]*/gi, ' ')
+            .replace(/\d+\s+to\s+\d+\s*ng\/mL[:\s]*(?:Deficiency|Insufficiency|Sufficiency|Toxicity|Optimal|Normal)[^0-9]*/gi, ' ');
 
-        console.log(`  🔢 ${numbers.length} números encontrados no segmento`);
+        // Find all numbers in the cleaned segment
+        const numbers = [...cleanedSegment.matchAll(/([\d.]+)\s*(High|Low|H|L)?/gi)];
+
+        console.log(`  🔢 ${numbers.length} números encontrados no segmento limpo`);
 
         if (numbers.length > 0) {
             // The actual value is typically the last meaningful number
@@ -489,25 +524,30 @@ function extractMyChartSingleValues(text) {
             let actualValue = null;
             let status = 'normal';
 
-            // Filter out range values first
+            const low = parseFloat(lowRange);
+            const high = parseFloat(highRange);
+
+            // Filter out range boundary values and description text numbers
             const filteredNumbers = numbers.filter(n => {
                 const num = parseFloat(n[1]);
-                return num !== parseFloat(lowRange) && num !== parseFloat(highRange);
+                // Skip exact range boundaries (often repeated in visual charts)
+                if (num === low || num === high) return false;
+                return true;
             });
 
-            // Take the FIRST non-range number (the actual test value)
-            // Changed from LAST to FIRST to avoid picking up numbers from next test name (e.g., "2" from "CO2")
+            // For MyChart visual chart format, the value comes AFTER the repeated range markers
+            // Pattern: "30 30   100 100  33" - the last unique number is the actual value
+            // So we should take the LAST number, not the first
             if (filteredNumbers.length > 0) {
-                const firstNum = filteredNumbers[0];
-                actualValue = parseFloat(firstNum[1]);
-                const flag = firstNum[2];
+                // Take the LAST non-range number (the actual test value at end of visual chart)
+                const lastNum = filteredNumbers[filteredNumbers.length - 1];
+                actualValue = parseFloat(lastNum[1]);
+                const flag = lastNum[2];
 
                 if (flag) {
                     status = flag.toLowerCase().startsWith('h') ? 'high' : 'low';
                 } else {
                     // Check if value is within normal range
-                    const low = parseFloat(lowRange);
-                    const high = parseFloat(highRange);
                     if (actualValue < low) {
                         status = 'low';
                     } else if (actualValue > high) {
