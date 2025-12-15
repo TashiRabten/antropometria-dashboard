@@ -337,6 +337,26 @@ function parseMyChartSingle(labInfo, text) {
     return labInfo;
 }
 
+// Clean test name - remove garbage prefixes from PDF parsing
+function cleanTestName(name) {
+    if (!name) return '';
+    return name
+        .replace(/^(New|Old|Final|Preliminary)\s+/i, '')
+        .replace(/\s*(PM|AM)\s+Page\s+\d+\s+of\s+\d+\s*/gi, '')
+        .replace(/[\r\n]+/g, ' ')
+        .replace(/^[\d.]+\s*(?:mg\/dL|ug\/dL|mmol\/L|g\/dL|mL\/min\/m2|mL\/min|U\/L|%)\s*/gi, '')  // "61 U/L" prefix
+        .replace(/^(?:mg\/dL|ug\/dL|mmol\/L|g\/dL|mL\/min|U\/L|%)\s+/i, '')  // unit prefix
+        .replace(/^m2\s+/i, '')  // "m2" fragment
+        .replace(/^Value\s+[\d.]+\s*/gi, '')  // "Value 21" prefix
+        .replace(/^[\d.]+\s+Value\s+[\d.]+\s*/gi, '')  // "61 Value 21" prefix
+        .replace(/^[\d.]+\s+(?=[A-Za-z])/g, '')  // leading numbers "99 eGFR" -> "eGFR"
+        .replace(/^(or greater|or less)\s+/i, '')
+        .replace(/.*?(MD|DO|PA|NP)\s*\([^)]*\)\s*/gi, '')
+        .replace(/^(High|Low)\s+/i, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+
 // Extract values from MyChart single-date format
 function extractMyChartSingleValues(text) {
     const values = {};
@@ -363,10 +383,16 @@ function extractMyChartSingleValues(text) {
 
     let match;
     while ((match = visualChartPattern.exec(text)) !== null) {
-        let testName = match[1].trim();
+        let testName = cleanTestName(match[1]);
         const lowRange = parseFloat(match[2]);
         const highRange = parseFloat(match[3]);
         const unit = match[4];
+
+        // Skip if test name is empty or too short after cleaning
+        if (!testName || testName.length < 2) {
+            console.log(`  ⚠️ Skipping - test name too short after cleaning`);
+            continue;
+        }
 
         // Skip if test name has excessive whitespace (likely spanning two columns)
         if (/\s{5,}/.test(testName)) {
@@ -374,9 +400,9 @@ function extractMyChartSingleValues(text) {
             continue;
         }
 
-        // Skip if test name is just a single digit followed by space (from previous test's chart)
-        if (/^\d\s/.test(testName)) {
-            console.log(`  ⚠️ Skipping "${testName}" - starts with lone digit (likely from previous test)`);
+        // Skip if already parsed
+        if (values[testName]) {
+            console.log(`  ⚠️ Skipping "${testName}" - already parsed`);
             continue;
         }
 
@@ -442,27 +468,10 @@ function extractMyChartSingleValues(text) {
 
     while ((match = rangePattern.exec(text)) !== null) {
         matchCount++;
-        let testName = match[1].trim();
+        let testName = cleanTestName(match[1]);
         const lowRange = match[2];
         const highRange = match[3];
         const unit = match[4];
-
-        // Clean test name - remove common PDF artifacts and prefixes
-        testName = testName
-            .replace(/^(New|Old|Final|Preliminary)\s+/i, '')  // Remove status prefixes
-            .replace(/\s*(PM|AM)\s+Page\s+\d+\s+of\s+\d+\s*/gi, '')  // Remove page numbers
-            .replace(/[\r\n]+/g, ' ')  // Replace newlines with spaces
-            .replace(/^[\d.]+\s*(?:mg\/dL|ug\/dL|mmol\/L|g\/dL|mL\/min\/m2|U\/L|%)\s*/gi, '')  // Remove "61 U/L" prefix
-            .replace(/^(mg\/dL|ug\/dL|mmol\/L|g\/dL|mL\/min|U\/L|%)\s+/i, '')  // Remove unit prefix
-            .replace(/^m2\s+/i, '')  // Remove "m2" unit fragment
-            .replace(/^Value\s+[\d.]+\s*/gi, '')  // Remove "Value 21" prefix
-            .replace(/^(Value|High|Low|H|L)\s+[\d.]+\s+/gi, '')  // Remove status + value
-            .replace(/^[\d.]+\s+(?=\D)/g, '')  // Remove leading numbers like "99 eGFR" -> "eGFR"
-            .replace(/^(or greater|or less)\s+/i, '')  // Remove "or greater", "or less"
-            .replace(/.*?(MD|DO|PA|NP)\s*\([^)]*\)\s*/gi, '')  // Remove "MD (Lab director)"
-            .replace(/^(High|Low)\s+/i, '')  // Remove status prefix
-            .replace(/\s{2,}/g, ' ')  // Collapse multiple spaces
-            .trim();
 
         console.log(`  📌 Match ${matchCount}: "${testName}" | Range: ${lowRange}-${highRange} ${unit}`);
 
@@ -576,24 +585,13 @@ function extractMyChartSingleValues(text) {
     const valuePattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]+?)\s+Normal (?:range|value):[^V]+Value\s+([\d.]+)/gi;
 
     while ((match = valuePattern.exec(text)) !== null) {
-        let testName = match[1].trim();
+        let testName = cleanTestName(match[1]);
         const value = parseFloat(match[2]);
 
-        // Clean test name
-        testName = testName
-            .replace(/^(New|Old|Final|Preliminary)\s+/i, '')
-            .replace(/\s*(PM|AM)\s+Page\s+\d+\s+of\s+\d+\s*/gi, '')
-            .replace(/[\r\n]+/g, ' ')
-            .replace(/^(mg\/dL|ug\/dL|mmol\/L|g\/dL|%)\s+/i, '')
-            .replace(/^(Value|High|Low|H|L)\s+[\d.]+\s+/gi, '')
-            .replace(/^(or greater|or less)\s+/i, '')
-            .replace(/.*?(MD|DO|PA|NP)\s*\([^)]*\)\s*/gi, '')
-            .replace(/^(High|Low)\s+/i, '')
-            .replace(/\s*(U\/L|Value)\s+\d+\s*/gi, '')
-            .replace(/\s{2,}/g, ' ')
-            .trim();
+        if (!testName || testName.length < 2) continue;
+        if (values[testName]) continue;
 
-        if (!values[testName] && !isNaN(value)) {
+        if (!isNaN(value)) {
             values[testName] = {
                 value: value,
                 unit: '',
@@ -609,35 +607,22 @@ function extractMyChartSingleValues(text) {
     const abovePattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]+?)\s+Normal\s+(?:range|value):\s*above\s*>?([\d.]+)\s*([A-Za-z\/]+)[\s\S]{0,100}?Value\s+>?([\d.]+)/gi;
 
     while ((match = abovePattern.exec(text)) !== null) {
-        let testName = match[1].trim();
+        let testName = cleanTestName(match[1]);
         const threshold = parseFloat(match[2]);
         const unit = match[3];
-        const valueStr = match[4];
-        const value = parseFloat(valueStr);
+        const value = parseFloat(match[4]);
 
-        // Clean test name
-        testName = testName
-            .replace(/^(New|Old|Final|Preliminary)\s+/i, '')
-            .replace(/\s*(PM|AM)\s+Page\s+\d+\s+of\s+\d+\s*/gi, '')
-            .replace(/[\r\n]+/g, ' ')
-            .replace(/^(mg\/dL|ug\/dL|mmol\/L|g\/dL|%)\s+/i, '')
-            .replace(/^(Value|High|Low|H|L)\s+[\d.]+\s+/gi, '')
-            .replace(/^(or greater|or less)\s+/i, '')
-            .replace(/.*?(MD|DO|PA|NP)\s*\([^)]*\)\s*/gi, '')
-            .replace(/^(High|Low)\s+/i, '')
-            .replace(/\s{2,}/g, ' ')
-            .trim();
+        if (!testName || testName.length < 2) continue;
+        if (values[testName]) continue;
 
-        if (!values[testName] && !isNaN(value)) {
-            // For ">20.0" format, the value is at or above the threshold
-            const actualValue = value;
+        if (!isNaN(value)) {
             values[testName] = {
-                value: actualValue,
+                value: value,
                 unit: unit,
                 range: `> ${threshold}`,
-                status: actualValue >= threshold ? 'normal' : 'low'
+                status: value >= threshold ? 'normal' : 'low'
             };
-            console.log(`  ✓ ${testName}: ${actualValue} ${unit} (${actualValue >= threshold ? 'normal' : 'low'})`);
+            console.log(`  ✓ ${testName}: ${value} ${unit} (${value >= threshold ? 'normal' : 'low'})`);
         }
     }
 
@@ -645,25 +630,15 @@ function extractMyChartSingleValues(text) {
     const belowPattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]+?)\s+Normal range:\s*below\s*<?([\d.]+)\s*([A-Za-z\/\*%]+)[^V]*Value\s+([\d.]+)/gi;
 
     while ((match = belowPattern.exec(text)) !== null) {
-        let testName = match[1].trim();
+        let testName = cleanTestName(match[1]);
         const threshold = parseFloat(match[2]);
         const unit = match[3];
         const value = parseFloat(match[4]);
 
-        // Clean test name
-        testName = testName
-            .replace(/^(New|Old|Final|Preliminary)\s+/i, '')
-            .replace(/\s*(PM|AM)\s+Page\s+\d+\s+of\s+\d+\s*/gi, '')
-            .replace(/[\r\n]+/g, ' ')
-            .replace(/^(mg\/dL|ug\/dL|mmol\/L|g\/dL|%)\s+/i, '')
-            .replace(/^(Value|High|Low|H|L)\s+[\d.]+\s+/gi, '')
-            .replace(/^(or greater|or less)\s+/i, '')
-            .replace(/.*?(MD|DO|PA|NP)\s*\([^)]*\)\s*/gi, '')
-            .replace(/^(High|Low)\s+/i, '')
-            .replace(/\s{2,}/g, ' ')
-            .trim();
+        if (!testName || testName.length < 2) continue;
+        if (values[testName]) continue;
 
-        if (!values[testName] && !isNaN(value)) {
+        if (!isNaN(value)) {
             values[testName] = {
                 value: value,
                 unit: unit,
@@ -679,17 +654,20 @@ function extractMyChartSingleValues(text) {
     const highLowPattern = /([A-Za-z][A-Za-z\s\-\/0-9]+?)\s+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/\*%]+)[\s\S]{0,200}?([\d.]+)\s+(High|Low)/gi;
 
     while ((match = highLowPattern.exec(text)) !== null) {
-        const testName = match[1].trim();
+        let testName = cleanTestName(match[1]);
         const lowRange = parseFloat(match[2]);
         const highRange = parseFloat(match[3]);
         const unit = match[4];
         const value = parseFloat(match[5]);
         const status = match[6].toLowerCase();
 
+        if (!testName || testName.length < 2) continue;
+        if (values[testName]) continue;
+
         // Skip if value equals range boundaries
         if (value === lowRange || value === highRange) continue;
 
-        if (!values[testName] && !isNaN(value)) {
+        if (!isNaN(value)) {
             values[testName] = {
                 value: value,
                 unit: unit,
@@ -707,11 +685,17 @@ function extractMyChartSingleValues(text) {
     const splitValuePattern = /([A-Za-z0-9][A-Za-z0-9\s\-\/\(\),]{2,60}?)\s+Normal\s+(?:range|value):\s*(?:below\s*<?|above\s*>?)?\s*([\d.]+)(?:\s*-\s*([\d.]+))?\s+([A-Za-z\/]+)[\s\S]{0,50}?Value\s+([\d.]+)/gi;
 
     while ((match = splitValuePattern.exec(text)) !== null) {
-        let testName = match[1].trim();
+        let testName = cleanTestName(match[1]);
         const lowRange = match[2] ? parseFloat(match[2]) : null;
         const highRange = match[3] ? parseFloat(match[3]) : null;
         const unit = match[4];
         const value = parseFloat(match[5]);
+
+        // Skip if test name is empty or too short after cleaning
+        if (!testName || testName.length < 2) {
+            console.log(`  ⚠️ Skipping - test name too short after cleaning`);
+            continue;
+        }
 
         // Skip if test name has excessive whitespace (likely spanning two columns)
         if (/\s{5,}/.test(testName)) {
@@ -719,13 +703,13 @@ function extractMyChartSingleValues(text) {
             continue;
         }
 
-        // Clean test name
-        testName = testName
-            .replace(/^(New|Old|Final|Preliminary)\s+/i, '')
-            .replace(/\s{2,}/g, ' ')
-            .trim();
+        // Skip if already parsed
+        if (values[testName]) {
+            console.log(`  ⚠️ Skipping "${testName}" - already parsed`);
+            continue;
+        }
 
-        if (!values[testName] && !isNaN(value)) {
+        if (!isNaN(value)) {
             let status = 'normal';
             let range = '';
 
