@@ -1253,7 +1253,7 @@ if (headerMatch) {
 
 // Converter datas para timestamps antes de salvar
     labInfo.dates = headerDates.map(d => d.getTime());
-    
+
 if (labInfo.dates && labInfo.dates.length > 0) {
     labInfo.collectionDate = labInfo.dates[labInfo.dates.length - 1];
 }
@@ -1771,12 +1771,6 @@ function extractMemorialHealthValues(text) {
 function extractPeriodValues(text, dates) {
     const values = {};
 
-    dataPoints.push({
-    date: dates[j].getTime(), // Converte Date para timestamp numérico
-    value: value,
-    status: status
-});
-
     console.log('🔍 Extraindo valores do formato período...');
     console.log(`📅 Datas disponíveis: ${dates.length}`);
 
@@ -1871,7 +1865,7 @@ function extractPeriodValues(text, dates) {
 
                     if (!isNaN(value) && dates[j]) {
                         dataPoints.push({
-                            date: dates[j],
+                            date: dates[j].getTime(),
                             value: value,
                             status: status
                         });
