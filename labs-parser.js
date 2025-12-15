@@ -435,59 +435,74 @@ function parseMyChartSingle(labInfo, text) {
 // Clean test name - remove garbage prefixes from PDF parsing
 function cleanTestName(name) {
     if (!name) return '';
+    
+    // First, normalize whitespace
     let cleaned = name
+        .replace(/\s{2,}/g, ' ')  // Multiple spaces to single space
+        .replace(/[\r\n]+/g, ' ')
+        .trim();
+    
+    // Remove leading "ology" (from "Laboratories")
+    cleaned = cleaned.replace(/^ology\s+/i, '');
+    
+    // Remove common prefix patterns
+    cleaned = cleaned
         .replace(/^(New|Old|Final|Preliminary)\s+/i, '')
         .replace(/\s*(PM|AM)\s+Page\s+\d+\s+of\s+\d+\s*/gi, '')
-        .replace(/[\r\n]+/g, ' ')
-        // Remove reference range patterns at start: "0.9 - 11.2)" or "12 - 88)"
         .replace(/^[\d.]+\s*-\s*[\d.]+\s*\)\s*/g, '')
-        // Remove "Ref:" patterns
         .replace(/^\(Ref:\s*[^)]+\)\s*/gi, '')
-        // Remove unit prefixes with numbers
         .replace(/^[\d.]+\s*(?:mg\/dL|ug\/dL|mmol\/L|g\/dL|mL\/min\/m2|mL\/min|U\/L|%|fL|pg|PG\/ML|NG\/ML|K\/UL|GM\/DL|10\*[36]\/uL)\s*/gi, '')
-        // Remove unit prefix alone
         .replace(/^(?:mg\/dL|ug\/dL|mmol\/L|g\/dL|mL\/min|U\/L|uL|fL|pg|PG\/ML|NG\/ML|K\/UL|GM\/DL|%)\s+/i, '')
         .replace(/^10\*[36]\/uL\s+/i, '')
         .replace(/^m2\s+/i, '')
         .replace(/^Value\s+[\d.]+\s*/gi, '')
         .replace(/^[\d.]+\s+Value\s+[\d.]+\s*/gi, '')
-        // Remove repeated "Yes" or "No" patterns
         .replace(/^(?:Yes\s+|No\s+)+/gi, '')
-        // Remove repeated numbers
         .replace(/^(?:[\d.]+\s+){2,}(?=\D)/g, '')
-        // Remove leading single number
         .replace(/^[\d.]+\s+(?=[A-Za-z])/g, '')
         .replace(/^(or greater|or less)\s+/i, '')
         .replace(/.*?(MD|DO|PA|NP)\s*\([^)]*\)\s*/gi, '')
         .replace(/^(High|Low|Normal)\s+/i, '')
-        // Remove trailing "normal", "high", "low"
-        .replace(/\s+(normal|high|low)$/i, '')
-        .replace(/\s{2,}/g, ' ')
-        .trim();
-
+        .replace(/\s+(normal|high|low)$/i, '');
+    
+    // Remove header words from the START (in any order)
+    const headerWords = ['LABORATORIES', 'ENDOCRINOLOGY', 'PANEL', 'COMPREHENSIVE', 'METABOLIC', 'DIFFERENTIAL', 'CBC', 'LIPID', 'PROTEIN', 'MARKERS'];
+    
+    // Keep removing header words from start until none found
+    let prevCleaned = '';
+    while (prevCleaned !== cleaned) {
+        prevCleaned = cleaned;
+        for (const hw of headerWords) {
+            const regex = new RegExp(`^${hw}\\s+`, 'i');
+            cleaned = cleaned.replace(regex, '');
+        }
+        cleaned = cleaned.trim();
+    }
+    
+    // Fix spaced compound words
+    cleaned = cleaned.replace(/\bA1\s+C\b/gi, 'A1C');
+    cleaned = cleaned.replace(/\bB\s+6\b/gi, 'B6');
+    cleaned = cleaned.replace(/\bB\s+12\b/gi, 'B12');
+    
+    // Remove "%" from start
+    cleaned = cleaned.replace(/^%\s+/, '');
+    
     // Run number removal again in case there are still leading numbers
     cleaned = cleaned.replace(/^[\d.]+\s+(?=[A-Za-z])/g, '').trim();
-    // Remove any remaining leading parenthesis with range
     cleaned = cleaned.replace(/^[\d.\-\s]+\)\s*/g, '').trim();
 
-    // Filter out invalid standalone names (headers, labels, etc.)
+    // Filter out invalid standalone names
     const invalidNames = ['total', 'name', 'standard', 'range', 'result', 'date', 'value', 'unit', 'ref', 'reference', 'test', 'patient', 'age', 'sex', 'dob', 'order', 'collected', 'reported'];
     if (invalidNames.includes(cleaned.toLowerCase())) {
         return '';
     }
 
-    // Remove header words from start
-    const headerWords = ['PROTEIN', 'MARKERS', 'LIPID', 'PANEL', 'COMPREHENSIVE', 'METABOLIC', 'DIFFERENTIAL', 'CBC', 'ENDOCRINOLOGY'];
-    let words = cleaned.split(/\s+/);
-    while (words.length > 1 && headerWords.includes(words[0].toUpperCase())) {
-        words.shift();
-    }
-    cleaned = words.join(' ');
-
     return cleaned;
 }
 
-// Extract values from MyChart single-date format
+
+// Extract
+// values from MyChart single-date format
 function extractMyChartSingleValues(text) {
     const values = {};
 
