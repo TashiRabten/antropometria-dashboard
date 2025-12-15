@@ -1070,63 +1070,113 @@ function parseUIHealth(labInfo, text) {
 function extractUIHealthValues(text) {
     const values = {};
 
+    console.log('🔍 Extraindo valores do formato UI Health...');
+
     // Pattern: Test Name: Value UNIT (optional: High/Low) (Ref: range)
     // Examples:
     // "Blood Urea Nitrogen: 22 MG/DL (High) (Ref: 06-20)"
     // "Sodium: 140 MMOL/L (Ref: 135-145)"
-    // "Hemoglobin A1c: Pending"
+    // "Ferritin: 83 NG/ML (Ref: 22 - 275)"
+    // "Cholesterol: 173 MG/DL (Ref: <200)"
 
-    const lines = text.split('\n');
+    // UI Health PDFs often have all text on one line separated by double spaces
+    // Split by double space or newline
+    const segments = text.split(/\s{2,}|\n/).filter(s => s.trim());
 
-    for (let line of lines) {
-        line = line.trim();
+    // Also try regex matching directly on the full text for better results
+    // Pattern 1: TestName: Value UNIT (High/Low) (Ref: range)
+    const pattern1 = /([A-Za-z][A-Za-z\s,.\-\/()%]+?):\s*([\d.]+)\s+([A-Z\/\*%]+)\s+\((?:High|Low)\)\s+\(Ref:\s*([^)]+)\)/gi;
 
-        // Skip empty lines and headers
-        if (!line || line.includes('PATIENT DEMOGRAPHICS') || line.includes('ORDER INFORMATION')) {
-            continue;
-        }
+    // Pattern 2: TestName: Value UNIT (Ref: range) - without High/Low
+    const pattern2 = /([A-Za-z][A-Za-z\s,.\-\/()%]+?):\s*([\d.]+)\s+([A-Z\/\*%]+)\s+\(Ref:\s*([^)]+)\)/gi;
 
-        // Match pattern: "Name: Value UNIT (Flag) (Ref: range)" or "Name: Value UNIT (Ref: range)"
-        const valueMatch = line.match(/^(.+?):\s+(\d+\.?\d*)\s+([A-Z\/]+)(?:\s+\((?:High|Low)\))?\s+\(Ref:\s+([^)]+)\)/);
+    // Pattern 3: TestName: Value UNIT (no ref range)
+    const pattern3 = /([A-Za-z][A-Za-z\s,.\-\/()%]+?):\s*([\d.]+)\s+([A-Z\/\*%]+)(?:\s|$)/gi;
 
-        if (valueMatch) {
-            const testName = valueMatch[1].trim();
-            const value = parseFloat(valueMatch[2]);
-            const unit = valueMatch[3];
-            const refRange = valueMatch[4];
+    let match;
 
-            // Determine if out of range
-            let flag = '';
-            if (line.includes('(High)')) flag = 'High';
-            else if (line.includes('(Low)')) flag = 'Low';
+    // Try Pattern 1 first (with High/Low flag)
+    while ((match = pattern1.exec(text)) !== null) {
+        const testName = cleanTestName(match[1]);
+        const value = parseFloat(match[2]);
+        const unit = match[3];
+        const refRange = match[4].trim();
+
+        if (testName && !isNaN(value) && !values[testName]) {
+            // Determine status from context
+            const contextStart = Math.max(0, match.index);
+            const contextEnd = Math.min(text.length, match.index + match[0].length + 10);
+            const context = text.substring(contextStart, contextEnd);
+
+            let status = 'normal';
+            if (context.includes('(High)')) status = 'high';
+            else if (context.includes('(Low)')) status = 'low';
 
             values[testName] = {
                 value: value,
                 unit: unit,
                 range: refRange,
-                flag: flag,
-                date: null  // Will be set from collectionDate
+                status: status
             };
-        } else {
-            // Try matching "Name: Value UNIT" without ref range (for calculated values like eGFR)
-            const simpleMatch = line.match(/^(.+?):\s+(\d+\.?\d*)\s+([A-Z\/]+)(?:\s+\(Ref:\s+([^)]+)\))?$/);
-            if (simpleMatch) {
-                const testName = simpleMatch[1].trim();
-                const value = parseFloat(simpleMatch[2]);
-                const unit = simpleMatch[3];
-                const refRange = simpleMatch[4] || '';
-
-                values[testName] = {
-                    value: value,
-                    unit: unit,
-                    range: refRange,
-                    flag: '',
-                    date: null
-                };
-            }
+            console.log(`  ✓ ${testName}: ${value} ${unit} (${status}) [Ref: ${refRange}]`);
         }
     }
 
+    // Try Pattern 2 (without High/Low flag)
+    while ((match = pattern2.exec(text)) !== null) {
+        const testName = cleanTestName(match[1]);
+        const value = parseFloat(match[2]);
+        const unit = match[3];
+        const refRange = match[4].trim();
+
+        if (testName && !isNaN(value) && !values[testName]) {
+            // Determine status from range
+            let status = 'normal';
+            const rangeMatch = refRange.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/);
+            if (rangeMatch) {
+                const low = parseFloat(rangeMatch[1]);
+                const high = parseFloat(rangeMatch[2]);
+                if (value < low) status = 'low';
+                else if (value > high) status = 'high';
+            } else if (refRange.startsWith('<')) {
+                const threshold = parseFloat(refRange.replace(/[<>]/g, ''));
+                if (!isNaN(threshold) && value >= threshold) status = 'high';
+            } else if (refRange.startsWith('>')) {
+                const threshold = parseFloat(refRange.replace(/[<>]/g, ''));
+                if (!isNaN(threshold) && value <= threshold) status = 'low';
+            }
+
+            values[testName] = {
+                value: value,
+                unit: unit,
+                range: refRange,
+                status: status
+            };
+            console.log(`  ✓ ${testName}: ${value} ${unit} (${status}) [Ref: ${refRange}]`);
+        }
+    }
+
+    // Try Pattern 3 (no ref range - for calculated values)
+    while ((match = pattern3.exec(text)) !== null) {
+        const testName = cleanTestName(match[1]);
+        const value = parseFloat(match[2]);
+        const unit = match[3];
+
+        // Skip if already found or if it's a header/label
+        if (testName && !isNaN(value) && !values[testName] &&
+            !testName.includes('PATIENT') && !testName.includes('ORDER') &&
+            !testName.includes('Laboratory') && !testName.includes('Client')) {
+            values[testName] = {
+                value: value,
+                unit: unit,
+                range: '',
+                status: 'normal'
+            };
+            console.log(`  ✓ ${testName}: ${value} ${unit} (no ref)`);
+        }
+    }
+
+    console.log(`📊 Total: ${Object.keys(values).length} valores extraídos (UI Health)`);
     return values;
 }
 
