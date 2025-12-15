@@ -476,6 +476,14 @@ function cleanTestName(name) {
         return '';
     }
 
+    // Remove header words from start
+    const headerWords = ['PROTEIN', 'MARKERS', 'LIPID', 'PANEL', 'COMPREHENSIVE', 'METABOLIC', 'DIFFERENTIAL', 'CBC', 'ENDOCRINOLOGY'];
+    let words = cleaned.split(/\s+/);
+    while (words.length > 1 && headerWords.includes(words[0].toUpperCase())) {
+        words.shift();
+    }
+    cleaned = words.join(' ');
+
     return cleaned;
 }
 
