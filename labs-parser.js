@@ -285,7 +285,21 @@ function generateLabId(filename) {
 
 // Identify PDF format
 function identifyPDFFormat(text, filename) {
-    // Check for UI Health format first
+    // Check for Memorial Health format (clean OCR'd lab reports)
+    // Identifiers: "PATIENT DEMOGRAPHICS" + "Date of Report" + simple "Test: Value" format
+    if (text.includes('PATIENT DEMOGRAPHICS') && text.includes('Date of Report:') &&
+        !text.includes('ORDER INFORMATION') && !text.includes('myHealth@SC')) {
+        return 'memorial-health';
+    }
+
+    // Check for Follow My Health format
+    // Identifiers: "myHealth@SC", "Follow My Health", or specific format with "Resulted On" column
+    if (text.includes('myHealth@SC') || text.includes('Follow My Health') ||
+        (text.includes('Resulted') && text.includes('On') && text.includes('Source'))) {
+        return 'follow-my-health';
+    }
+
+    // Check for UI Health format
     // Identifiers: "UI Health Pathology Laboratories", "PATIENT DEMOGRAPHICS", "ORDER INFORMATION"
     if (text.includes('UI Health Pathology Laboratories') ||
         (text.includes('PATIENT DEMOGRAPHICS') && text.includes('ORDER INFORMATION'))) {
@@ -340,6 +354,10 @@ async function parsePDF(labInfo, text) {
             return parseMyChartPeriod(labInfo, text);
         case 'ui-health':
             return parseUIHealth(labInfo, text);
+        case 'follow-my-health':
+            return parseFollowMyHealth(labInfo, text);
+        case 'memorial-health':
+            return parseMemorialHealth(labInfo, text);
         default:
             return labInfo;
     }
@@ -351,7 +369,7 @@ function parseMyChartSingle(labInfo, text) {
 
     // Extract lab type from title
     // First try specific known patterns
-    const titleMatch = text.match(/(COMPREHENSIVE METABOLIC PANEL|CBC W.*?DIFFERENTIAL|HEMOGLOBIN A1C|A1C|IRON AND TOTAL IRON BINDING|LIPID PANEL|25-OH VITAMIN D|VITAMIN D|VITAMIN C|VITAMIN B-?12|B-?12|FERRITIN|FOLATE|C-REACTIVE PROTEIN|THIAMINE|B-?1)/i);
+    const titleMatch = text.match(/(COMPREHENSIVE METABOLIC PANEL|CBC W.*?DIFFERENTIAL|HEMOGLOBIN A1C|A1C|IRON AND TOTAL IRON BINDING|LIPID PANEL|25-OH VITAMIN D|VITAMIN D|VITAMIN C|VITAMIN A|VITAMIN B-?12|B-?12|FERRITIN|FOLATE|C-REACTIVE PROTEIN|HIGH SENSITIVITY C-REACTIVE|HSCRP|THIAMINE|B-?1)/i);
     if (titleMatch) {
         console.log('🏷️ Título específico encontrado:', titleMatch[1]);
         const title = titleMatch[1];
@@ -362,11 +380,12 @@ function parseMyChartSingle(labInfo, text) {
         else if (title.match(/LIPID/i)) labInfo.labType = 'Lipídios';
         else if (title.match(/VITAMIN D|25-OH VITAMIN D/i)) labInfo.labType = 'Vitamina D';
         else if (title.match(/VITAMIN C/i)) labInfo.labType = 'Vitamina C';
+        else if (title.match(/VITAMIN A/i)) labInfo.labType = 'Vitamina A';
         else if (title.match(/\bB-?12\b/i)) labInfo.labType = 'B12';
         else if (title.match(/\bB-?1\b/i) && !title.match(/B-?12/i)) labInfo.labType = 'B1';
         else if (title.includes('FERRITIN')) labInfo.labType = 'Ferritina';
         else if (title.includes('FOLATE')) labInfo.labType = 'Folato';
-        else if (title.includes('C-REACTIVE')) labInfo.labType = 'PCR';
+        else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'PCR';
         else if (title.includes('THIAMINE')) labInfo.labType = 'B1';
     } else {
         // Fallback: Extract any ALL-CAPS title before "Collected on"
@@ -450,6 +469,12 @@ function cleanTestName(name) {
     cleaned = cleaned.replace(/^[\d.]+\s+(?=[A-Za-z])/g, '').trim();
     // Remove any remaining leading parenthesis with range
     cleaned = cleaned.replace(/^[\d.\-\s]+\)\s*/g, '').trim();
+
+    // Filter out invalid standalone names (headers, labels, etc.)
+    const invalidNames = ['total', 'name', 'standard', 'range', 'result', 'date', 'value', 'unit', 'ref', 'reference', 'test', 'patient', 'age', 'sex', 'dob', 'order', 'collected', 'reported'];
+    if (invalidNames.includes(cleaned.toLowerCase())) {
+        return '';
+    }
 
     return cleaned;
 }
@@ -829,6 +854,50 @@ function extractMyChartSingleValues(text) {
         }
     }
 
+    // Pattern 8: Simple Vitamin format - value on separate line after range
+    // Format: "Vitamin X[, descriptor]\nNormal range: LOW - HIGH unit\n\nVALUE\nLOW\n\nHIGH"
+    // The actual value is the FIRST number after the unit that's NOT a range boundary
+    const vitaminPattern = /(Vitamin\s+[A-Za-z0-9,\s\(\)\-]+?)\s+Normal\s+range:\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)/gi;
+
+    let vitMatch;
+    while ((vitMatch = vitaminPattern.exec(text)) !== null) {
+        let testName = cleanTestName(vitMatch[1]);
+        const lowRange = parseFloat(vitMatch[2]);
+        const highRange = parseFloat(vitMatch[3]);
+        const unit = vitMatch[4];
+
+        if (!testName || values[testName]) continue;
+
+        // Get segment after match
+        const startPos = vitMatch.index + vitMatch[0].length;
+        const segment = text.substring(startPos, startPos + 200);
+
+        // Extract all numbers
+        const allNumbers = [...segment.matchAll(/([\d.]+)/g)].map(m => parseFloat(m[1]));
+
+        // Find first number that's not a range boundary
+        const candidateValues = allNumbers.filter(num => {
+            if (Math.abs(num - lowRange) < 0.001) return false;
+            if (Math.abs(num - highRange) < 0.001) return false;
+            return true;
+        });
+
+        if (candidateValues.length > 0) {
+            const value = candidateValues[0];
+            let status = 'normal';
+            if (value < lowRange) status = 'low';
+            else if (value > highRange) status = 'high';
+
+            values[testName] = {
+                value: value,
+                unit: unit,
+                range: `${lowRange} - ${highRange}`,
+                status: status
+            };
+            console.log(`  ✓ ${testName}: ${value} ${unit} (${status}) [Vitamin pattern]`);
+        }
+    }
+
     return values;
 }
 
@@ -838,7 +907,7 @@ function parseHealow(labInfo, text) {
 
     // Extract lab type from title
     // First try specific known patterns
-    const titleMatch = text.match(/(BASIC METABOLIC PANEL|COMPREHENSIVE METABOLIC PANEL|COMPLETE BLOOD COUNT|BLOOD DIFFERENTIAL|LIPID PANEL|VITAMIN B-?12|B-?12|VITAMIN B-?6|B-?6|FERRITIN|FOLATE|C-REACTIVE PROTEIN)/i);
+    const titleMatch = text.match(/(BASIC METABOLIC PANEL|COMPREHENSIVE METABOLIC PANEL|COMPLETE BLOOD COUNT|BLOOD DIFFERENTIAL|LIPID PANEL|VITAMIN B-?12|B-?12|VITAMIN B-?6|B-?6|FERRITIN|FOLATE|C-REACTIVE PROTEIN|HIGH SENSITIVITY C-REACTIVE|HSCRP)/i);
     if (titleMatch) {
         console.log('🏷️ Título específico encontrado:', titleMatch[1]);
         const title = titleMatch[1];
@@ -851,7 +920,7 @@ function parseHealow(labInfo, text) {
         else if (title.match(/\bB-?6\b/i)) labInfo.labType = 'B6';
         else if (title.includes('FERRITIN')) labInfo.labType = 'Ferritina';
         else if (title.includes('FOLATE')) labInfo.labType = 'Folato';
-        else if (title.includes('C-REACTIVE')) labInfo.labType = 'PCR';
+        else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'PCR';
     } else {
         // Fallback: Healow titles appear before the first asterisk (*)
         // Pattern: "LIPID PANEL, EXTENDED *"
@@ -955,7 +1024,7 @@ function extractHealowValues(text) {
         'BILIRUBIN', 'AST', 'ALT', 'ALKALINE PHOSPHATASE',
         'WBC', 'RBC', 'HEMOGLOBIN', 'HEMATOCRIT', 'MCV', 'MCH', 'MCHC',
         'PLATELET', 'NEUTROPHIL', 'LYMPHOCYTE', 'MONOCYTE',
-        'C-REACTIVE PROTEIN', 'CRP'
+        'C-REACTIVE PROTEIN', 'CRP', 'HIGH SENSITIVE CRP', 'HIGH SENSITIVITY CRP', 'HSCRP'
     ];
 
     for (const testName of testNames) {
@@ -979,6 +1048,78 @@ function extractHealowValues(text) {
                 status: abnormal === 'H' ? 'high' : abnormal === 'L' ? 'low' : 'normal'
             };
             console.log(`  ✓ ${testName}: ${value} ${unit} (${abnormal || 'normal'})`);
+        }
+    }
+
+    // Pattern 3: Handle "See below" reference ranges (like HIGH SENSITIVE CRP)
+    // Format: TEST_NAME   VALUE   See below (UNIT)
+    const seebelowPattern = /([A-Z][A-Z\s]+?(?:CRP|PROTEIN))\s+([\d.]+)\s+See below\s*\(([^)]+)\)/gi;
+    let seebelowMatch;
+    while ((seebelowMatch = seebelowPattern.exec(text)) !== null) {
+        const name = seebelowMatch[1].trim();
+        const value = parseFloat(seebelowMatch[2]);
+        const unit = seebelowMatch[3];
+
+        if (!values[name] && !isNaN(value)) {
+            // For CRP, determine status based on common thresholds
+            // Low Risk: <1.0; Average Risk: 1.0-3.0; High Risk: >=3.0
+            let status = 'normal';
+            if (name.includes('CRP') || name.includes('C-REACTIVE')) {
+                if (value >= 3.0) status = 'high';
+                else if (value >= 1.0) status = 'normal'; // Average risk
+                // else low risk = normal
+            }
+
+            values[name] = {
+                value: value,
+                unit: unit,
+                range: 'See below',
+                status: status
+            };
+            console.log(`  ✓ ${name}: ${value} ${unit} (${status}) [See below pattern]`);
+        }
+    }
+
+    // Pattern 4: Central Counties format - NAME/VALUE/REFERENCE RANGE table
+    // Format: TEST_NAME   VALUE   REFERENCE_RANGE
+    const lines = text.split('\n');
+    let inTable = false;
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        // Detect table header
+        if (line.includes('NAME') && line.includes('VALUE') && line.includes('REFERENCE')) {
+            inTable = true;
+            continue;
+        }
+
+        if (inTable && line.length > 5) {
+            // Try to match: TEST NAME   VALUE   RANGE
+            const tableMatch = line.match(/^([A-Z][A-Z\s]+?)\s{2,}([\d.]+)\s{2,}(.+)$/i);
+            if (tableMatch) {
+                const name = tableMatch[1].trim();
+                const value = parseFloat(tableMatch[2]);
+                const rangeText = tableMatch[3].trim();
+
+                if (!values[name] && !isNaN(value) && name.length > 2) {
+                    // Extract unit from range if present
+                    const unitMatch = rangeText.match(/\(([^)]+)\)/);
+                    const unit = unitMatch ? unitMatch[1] : '';
+
+                    values[name] = {
+                        value: value,
+                        unit: unit,
+                        range: rangeText.replace(/\([^)]+\)/, '').trim(),
+                        status: 'normal'
+                    };
+                    console.log(`  ✓ ${name}: ${value} ${unit} [table pattern]`);
+                }
+            }
+
+            // Stop at end of table indicators
+            if (line.includes('PERFORMING LAB') || line.includes('Result:')) {
+                inTable = false;
+            }
         }
     }
 
@@ -1016,20 +1157,50 @@ function parseMyChartPeriod(labInfo, text) {
 
     // Extract dates from text (format: M/D/YY or MM/DD/YYYY)
     // Look for multiple dates that are close together (header row)
+    // IMPORTANT: Exclude DOB (Date of Birth) which appears near patient info
+
+    // First, find DOB so we can exclude it
+    const dobMatch = text.match(/(?:DOB|Date of Birth|Birth Date)[:\s]*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
+    let dobDate = null;
+    if (dobMatch) {
+        let year = parseInt(dobMatch[3]);
+        if (year < 100) year += 2000;
+        dobDate = new Date(year, parseInt(dobMatch[1]) - 1, parseInt(dobMatch[2]));
+        console.log(`🎂 DOB encontrado: ${dobDate.toLocaleDateString()} - será excluído`);
+    }
+
     const allDates = [...text.matchAll(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/g)];
     let headerDates = [];
 
-    // Filter dates that are likely test dates (not page print dates)
-    // Page dates are usually at edges, test dates are grouped together
+    // Filter dates that are likely test dates (not DOB or print dates)
     if (allDates.length > 2) {
-        headerDates = allDates.slice(0, 10).map(m => {
-            let year = parseInt(m[3]);
-            if (year < 100) year += 2000;
-            return new Date(year, parseInt(m[1]) - 1, parseInt(m[2]));
-        });
+        const now = new Date();
+        const fiveYearsAgo = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate());
+        const fiftyYearsAgo = new Date(now.getFullYear() - 50, 0, 1);
+
+        headerDates = allDates
+            .map(m => {
+                let year = parseInt(m[3]);
+                if (year < 100) year += 2000;
+                return new Date(year, parseInt(m[1]) - 1, parseInt(m[2]));
+            })
+            .filter(d => {
+                // Exclude DOB
+                if (dobDate && Math.abs(d.getTime() - dobDate.getTime()) < 86400000) {
+                    return false;
+                }
+                // Exclude dates too old to be lab dates (likely DOB)
+                if (d < fiftyYearsAgo) {
+                    return false;
+                }
+                // Keep recent dates (within last 5 years typically)
+                return d >= fiveYearsAgo && d <= now;
+            })
+            .slice(0, 10);
+
         // Remove duplicates
         headerDates = [...new Set(headerDates.map(d => d.getTime()))].map(t => new Date(t));
-        console.log(`📅 ${headerDates.length} datas encontradas`);
+        console.log(`📅 ${headerDates.length} datas de exame encontradas (DOB excluído)`);
     }
 
     labInfo.dates = headerDates;
@@ -1215,6 +1386,277 @@ function extractUIHealthValues(text) {
     return values;
 }
 
+// Parse Follow My Health Format
+function parseFollowMyHealth(labInfo, text) {
+    console.log('📋 Parseando formato Follow My Health...');
+
+    // Extract lab types from "Order:" lines
+    // Format: "Order: CBC WITH DIFFERENTIAL Ordered On: MM/DD/YYYY Collected On: MM/DD/YYYY"
+    const orderMatches = [...text.matchAll(/Order:\s+([A-Z][A-Z\s\d\-\/\(\),]+?)(?:\s+Ordered On:|$)/gi)];
+    const labTypes = orderMatches.map(m => m[1].trim());
+    console.log(`🏷️ Tipos de exames encontrados: ${labTypes.join(', ')}`);
+
+    // Set primary lab type (first one or combined)
+    if (labTypes.length === 1) {
+        const lt = labTypes[0];
+        if (lt.includes('CBC')) labInfo.labType = 'CBC';
+        else if (lt.includes('LIPID')) labInfo.labType = 'Lipídios';
+        else if (lt.includes('HEMOGLOBIN A1C') || lt.includes('A1C')) labInfo.labType = 'A1C';
+        else if (lt.includes('IRON')) labInfo.labType = 'Ferro';
+        else labInfo.labType = cleanLabType(lt);
+    } else if (labTypes.length > 1) {
+        labInfo.labType = 'Painel Completo';
+    }
+
+    // Extract collection date from "Collected On: MM/DD/YYYY"
+    const collectedMatch = text.match(/Collected On:\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (collectedMatch) {
+        const month = parseInt(collectedMatch[1]);
+        const day = parseInt(collectedMatch[2]);
+        const year = parseInt(collectedMatch[3]);
+        labInfo.collectionDate = new Date(year, month - 1, day);
+        labInfo.dates = [labInfo.collectionDate];
+        console.log(`📅 Data de coleta: ${labInfo.collectionDate.toLocaleDateString()}`);
+    }
+
+    // Extract values
+    labInfo.values = extractFollowMyHealthValues(text);
+    console.log(`📊 ${Object.keys(labInfo.values).length} valores extraídos`);
+
+    return labInfo;
+}
+
+// Extract values from Follow My Health format
+function extractFollowMyHealthValues(text) {
+    const values = {};
+
+    console.log('🔍 Extraindo valores do formato Follow My Health...');
+
+    // The PDF text has columns on separate lines due to extraction
+    // Format is roughly: TEST_NAME \n DATE \n VALUE \n UNIT \n RANGE \n myHealth@SC
+    // But some test names span multiple lines
+
+    // Known test names to look for
+    const testPatterns = [
+        { name: 'WBC', patterns: [/\bWBC\b/i] },
+        { name: 'RBC', patterns: [/\bRBC\b/i] },
+        { name: 'Hemoglobin', patterns: [/HEMOGLOBIN\s*\(HGB\)/i, /\bHGB\b/i, /\bHEMOGLOBIN\b/i] },
+        { name: 'Hematocrit', patterns: [/HEMATOCRIT\s*\(HCT\)/i, /\bHCT\b/i, /\bHEMATOCRIT\b/i] },
+        { name: 'MCV', patterns: [/\bMCV\b/i] },
+        { name: 'MCH', patterns: [/\bMCH\b(?!C)/i] },
+        { name: 'MCHC', patterns: [/\bMCHC\b/i] },
+        { name: 'RDW-SD', patterns: [/\bRDW-SD\b/i] },
+        { name: 'RDW-CV', patterns: [/\bRDW-CV\b/i] },
+        { name: 'Platelets', patterns: [/\bPLT\b/i, /\bPLATELETS?\b/i] },
+        { name: 'MPV', patterns: [/\bMPV\b/i] },
+        { name: 'Neutrophils %', patterns: [/\bNEU%\b/i, /\bNEUTROPHILS?\s*%/i] },
+        { name: 'Lymphocytes %', patterns: [/\bLYM%\b/i, /\bLYMPHOCYTES?\s*%/i] },
+        { name: 'Monocytes %', patterns: [/\bMONO%\b/i, /\bMONOCYTES?\s*%/i] },
+        { name: 'Eosinophils %', patterns: [/\bEOS%\b/i, /\bEOSINOPHILS?\s*%/i] },
+        { name: 'Basophils %', patterns: [/\bBASO%\b/i, /\bBASOPHILS?\s*%/i] },
+        { name: 'Neutrophils Abs', patterns: [/\bABS\s*NEU\b/i, /\bNEU\s*ABS\b/i] },
+        { name: 'Lymphocytes Abs', patterns: [/\bABS\s*LYM\b/i, /\bLYM\s*ABS\b/i] },
+        { name: 'Monocytes Abs', patterns: [/\bABS\s*MONO\b/i, /\bMONO\s*ABS\b/i] },
+        { name: 'Eosinophils Abs', patterns: [/\bABS\s*EOS\b/i, /\bEOS\s*ABS\b/i] },
+        { name: 'Basophils Abs', patterns: [/\bABS\s*BASO\b/i, /\bBASO\s*ABS\b/i] },
+        { name: 'Immature Granulocytes %', patterns: [/\bIMM\.?\s*GRAN\s*%/i] },
+        { name: 'NRBC %', patterns: [/\bNRBC\s*%/i] },
+        { name: 'Cholesterol', patterns: [/\bCHOLESTEROL\b/i] },
+        { name: 'Triglycerides', patterns: [/\bTRIGLYCERIDES\b/i] },
+        { name: 'HDL', patterns: [/\bHDL\b/i] },
+        { name: 'LDL', patterns: [/\bLDL,?\s*CALCULATED\b/i, /\bLDL\b/i] },
+        { name: 'VLDL', patterns: [/\bVLDL\b/i] },
+        { name: 'Chol/HDL Ratio', patterns: [/\bCHOL\/HDL\b/i] },
+        { name: 'Hemoglobin A1C', patterns: [/\bHEMOGLOBIN\s*A1C\b/i, /\bA1C\b/i, /\bHBA1C\b/i] },
+        { name: 'Estimated Avg Glucose', patterns: [/ESTIMATED\s*AVERAGE\s*GLUCOSE/i, /\bEAG\b/i] },
+        { name: 'Iron', patterns: [/\bIRON\b(?!\s*PANEL)/i] },
+        { name: 'Iron Saturation %', patterns: [/\b%\s*SATURATION\b/i, /\bSATURATION\s*%/i] },
+        { name: 'Ferritin', patterns: [/\bFERRITIN\b/i] },
+        { name: 'TIBC', patterns: [/\bTIBC\b/i] }
+    ];
+
+    // Split text into lines for processing
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+    // Process each known test
+    for (const test of testPatterns) {
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+
+            // Check if this line matches the test name
+            let matched = false;
+            for (const pattern of test.patterns) {
+                if (pattern.test(line)) {
+                    matched = true;
+                    break;
+                }
+            }
+
+            if (matched && !values[test.name]) {
+                // Look for value in following lines (within next 10 lines)
+                // Format: Date, Value, Unit, Range, myHealth@SC
+                let foundValue = null;
+                let foundUnit = '';
+                let foundRange = '';
+
+                for (let j = i + 1; j < Math.min(i + 12, lines.length); j++) {
+                    const nextLine = lines[j];
+
+                    // Skip date lines
+                    if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(nextLine)) continue;
+
+                    // Skip myHealth@SC
+                    if (nextLine.includes('myHealth@SC')) break;
+
+                    // Check if this is a numeric value
+                    const numMatch = nextLine.match(/^([\d.]+)$/);
+                    if (numMatch && foundValue === null) {
+                        foundValue = parseFloat(numMatch[1]);
+                        continue;
+                    }
+
+                    // Check if this is a unit
+                    if (/^[A-Z][A-Za-z\/\*%\d]+$/.test(nextLine) && nextLine.length <= 10 && foundValue !== null && !foundUnit) {
+                        foundUnit = nextLine;
+                        continue;
+                    }
+
+                    // Check if this is a range (contains dash or < or >)
+                    if ((nextLine.includes('-') || nextLine.startsWith('<') || nextLine.startsWith('>')) && !foundRange) {
+                        foundRange = nextLine.replace(/\s+/g, '');
+                        continue;
+                    }
+                }
+
+                if (foundValue !== null && !isNaN(foundValue)) {
+                    // Determine status from range
+                    let status = 'normal';
+                    const rangeMatch = foundRange.match(/([\d.]+)\s*-\s*([\d.]+)/);
+                    if (rangeMatch) {
+                        const low = parseFloat(rangeMatch[1]);
+                        const high = parseFloat(rangeMatch[2]);
+                        if (foundValue < low) status = 'low';
+                        else if (foundValue > high) status = 'high';
+                    } else if (foundRange.startsWith('<')) {
+                        const threshold = parseFloat(foundRange.replace(/[<>]/g, ''));
+                        if (!isNaN(threshold) && foundValue >= threshold) status = 'high';
+                    } else if (foundRange.startsWith('>')) {
+                        const threshold = parseFloat(foundRange.replace(/[<>]/g, ''));
+                        if (!isNaN(threshold) && foundValue <= threshold) status = 'low';
+                    }
+
+                    values[test.name] = {
+                        value: foundValue,
+                        unit: foundUnit,
+                        range: foundRange,
+                        status: status
+                    };
+                    console.log(`  ✓ ${test.name}: ${foundValue} ${foundUnit} (${status}) [Range: ${foundRange}]`);
+                }
+            }
+        }
+    }
+
+    console.log(`📊 Total: ${Object.keys(values).length} valores extraídos (Follow My Health)`);
+    return values;
+}
+
+// Parse Memorial Health Format (clean OCR'd lab reports)
+function parseMemorialHealth(labInfo, text) {
+    console.log('📋 Parseando formato Memorial Health...');
+
+    // Extract date from "Date of Report: M/D/YYYY"
+    const dateMatch = text.match(/Date of Report:\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dateMatch) {
+        const month = parseInt(dateMatch[1]);
+        const day = parseInt(dateMatch[2]);
+        const year = parseInt(dateMatch[3]);
+        labInfo.collectionDate = new Date(year, month - 1, day);
+        labInfo.dates = [labInfo.collectionDate];
+        console.log(`📅 Data do relatório: ${labInfo.collectionDate.toLocaleDateString()}`);
+    }
+
+    // Detect lab type from section headers
+    const sections = [];
+    if (text.includes('CBC (COMPLETE BLOOD COUNT)') || text.includes('DIFFERENTIAL')) sections.push('CBC');
+    if (text.includes('ROUTINE CHEMISTRIES') || text.includes('ENZYMES')) sections.push('CMP');
+    if (text.includes('LIPID') || text.includes('ATHEROSCLEROTIC')) sections.push('Lipídios');
+    if (text.includes('IRON STUDIES')) sections.push('Ferro');
+    if (text.includes('ENDOCRINE')) sections.push('Tireoide');
+    if (text.includes('MISCELLANEOUS')) sections.push('Outros');
+
+    if (sections.length === 1) {
+        labInfo.labType = sections[0];
+    } else if (sections.length > 1) {
+        labInfo.labType = 'Painel Completo';
+    } else {
+        labInfo.labType = 'Exame';
+    }
+    console.log(`🏷️ Tipo de exame: ${labInfo.labType}`);
+
+    // Extract values - simple format: "Test Name: Value" with optional H/L flag
+    labInfo.values = extractMemorialHealthValues(text);
+    console.log(`📊 ${Object.keys(labInfo.values).length} valores extraídos`);
+
+    return labInfo;
+}
+
+// Extract values from Memorial Health format
+function extractMemorialHealthValues(text) {
+    const values = {};
+
+    console.log('🔍 Extraindo valores do formato Memorial Health...');
+
+    // Simple pattern: "Test Name: Value" with optional H/L flag and optional %
+    // Examples:
+    // "Hemoglobin: 13.2 L"
+    // "Neutrophils: 63 %"
+    // "Cholesterol: 177"
+    // "Chol/HDL ratio: 6.10 H"
+
+    const lines = text.split('\n');
+
+    for (const line of lines) {
+        // Skip section headers (all caps lines without colon-value pattern)
+        if (/^[A-Z\s\(\)&\/]+$/.test(line.trim()) && !line.includes(':')) continue;
+
+        // Match pattern: TestName: Value [H|L] [%]
+        const match = line.match(/^([A-Za-z0-9][A-Za-z0-9\s,\/\(\)\-]+?):\s*([\d.]+)\s*([HL%]*)?\s*(%)?$/i);
+
+        if (match) {
+            let testName = match[1].trim();
+            const value = parseFloat(match[2]);
+            const flags = (match[3] || '') + (match[4] || '');
+
+            // Clean test name
+            testName = cleanTestName(testName);
+            if (!testName || testName.length < 2) continue;
+
+            // Determine status
+            let status = 'normal';
+            if (flags.includes('H')) status = 'high';
+            else if (flags.includes('L')) status = 'low';
+
+            // Determine unit
+            let unit = '';
+            if (flags.includes('%')) unit = '%';
+
+            if (!isNaN(value) && !values[testName]) {
+                values[testName] = {
+                    value: value,
+                    unit: unit,
+                    range: '',
+                    status: status
+                };
+                console.log(`  ✓ ${testName}: ${value} ${unit} (${status})`);
+            }
+        }
+    }
+
+    console.log(`📊 Total: ${Object.keys(values).length} valores extraídos (Memorial Health)`);
+    return values;
+}
+
 // Extract values from period format
 function extractPeriodValues(text, dates) {
     const values = {};
@@ -1250,7 +1692,11 @@ function extractPeriodValues(text, dates) {
         // Thyroid tests
         'TSH', 'T3', 'T4', 'Free T3', 'Free T4', 'T3 Free', 'T4 Free',
         // Other tests
-        'CK', 'Total CK', 'Creatine Kinase'
+        'CK', 'Total CK', 'CK, Total', 'CK Total', 'Creatine Kinase', 'Creatine Kinase, Total',
+        // Vitamin tests
+        'Vitamin D', '25-OH Vitamin D', 'Vitamin D, 25-Hydroxy', 'Vitamin B12', 'Folate',
+        // A1C
+        'Hemoglobin A1C', 'A1C', 'HbA1c'
     ];
 
     for (const testName of periodTests) {
@@ -1343,10 +1789,16 @@ function extractPeriodValues(text, dates) {
         const unit = genericMatch[3] || '';
         const valuesStr = genericMatch[4];
 
-        // Skip if already found or is a header
+        // Skip if already found or is a header/invalid
         if (values[testName] || !testName || testName.length < 2) continue;
-        const upperName = testName.toUpperCase();
-        if (['NAME', 'STANDARD', 'RANGE', 'RESULT', 'DATE'].some(h => upperName.includes(h))) continue;
+        const upperName = testName.toUpperCase().trim();
+
+        // Skip header words and standalone generic words
+        const invalidExactNames = ['TOTAL', 'NAME', 'STANDARD', 'RANGE', 'RESULT', 'DATE', 'VALUE', 'UNIT', 'REF', 'REFERENCE', 'TEST', 'PATIENT', 'AGE', 'SEX', 'DOB'];
+        if (invalidExactNames.includes(upperName)) continue;
+
+        // Skip if name contains header words
+        if (['STANDARD RANGE', 'RESULT VALUE', 'REF RANGE'].some(h => upperName.includes(h))) continue;
 
         const valueMatches = [...valuesStr.matchAll(/([\d.]+)\s*([HL])?/g)];
 
@@ -1732,6 +2184,15 @@ function createLabCard(lab) {
             case 'chart-ocr':
                 formatLabel = 'Gráfico';
                 break;
+            case 'ui-health':
+                formatLabel = 'UI Health';
+                break;
+            case 'follow-my-health':
+                formatLabel = 'Follow My Health';
+                break;
+            case 'memorial-health':
+                formatLabel = 'Memorial Health';
+                break;
             default:
                 formatLabel = 'Exame';
         }
@@ -1775,6 +2236,16 @@ function createValuePreview(values) {
     return valueKeys.map(key => {
         const val = values[key];
         const abnormal = val.status && val.status !== 'normal';
+
+        // For period labs with multiple dataPoints, show count
+        if (val.dataPoints && val.dataPoints.length > 1) {
+            const latestVal = val.dataPoints[val.dataPoints.length - 1];
+            const latestAbnormal = latestVal.status && latestVal.status !== 'normal';
+            return `<span class="lab-value-tag ${latestAbnormal ? 'abnormal' : 'normal'}">
+                ${key}: ${latestVal.value} <small>(${val.dataPoints.length}x)</small>
+            </span>`;
+        }
+
         return `<span class="lab-value-tag ${abnormal ? 'abnormal' : 'normal'}">
             ${key}: ${val.value || val.dataPoints?.[0]?.value || '--'}
         </span>`;
@@ -1816,16 +2287,43 @@ function displayExtractedValues(values) {
         const abnormal = data.status && data.status !== 'normal';
         const statusClass = data.status || 'normal';
 
-        html += `
-            <tr>
-                <td class="value-name">${name}</td>
-                <td class="text-end">
-                    <span class="value-number ${abnormal ? 'abnormal' : ''}">${data.value || '--'}</span>
-                    ${data.unit ? `<small class="text-muted">${data.unit}</small>` : ''}
-                    ${data.status ? `<span class="value-status ${statusClass}">${statusClass}</span>` : ''}
-                </td>
-            </tr>
-        `;
+        // Check if this has multiple dataPoints (period format)
+        if (data.dataPoints && data.dataPoints.length > 1) {
+            // Multi-value row - show all data points
+            html += `
+                <tr class="period-row">
+                    <td class="value-name">
+                        ${name}
+                        <small class="text-muted d-block">${data.range || ''} ${data.unit || ''}</small>
+                    </td>
+                    <td class="text-end">
+                        <div class="datapoints-list">
+                            ${data.dataPoints.map(dp => {
+                                const dpAbnormal = dp.status && dp.status !== 'normal';
+                                const dpStatusClass = dp.status || 'normal';
+                                const dateStr = dp.date ? new Date(dp.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'}) : '';
+                                return `<div class="datapoint-item ${dpAbnormal ? 'abnormal' : ''}">
+                                    <span class="dp-date">${dateStr}</span>
+                                    <span class="dp-value ${dpStatusClass}">${dp.value}</span>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        } else {
+            // Single value row
+            html += `
+                <tr>
+                    <td class="value-name">${name}</td>
+                    <td class="text-end">
+                        <span class="value-number ${abnormal ? 'abnormal' : ''}">${data.value || '--'}</span>
+                        ${data.unit ? `<small class="text-muted">${data.unit}</small>` : ''}
+                        ${data.status ? `<span class="value-status ${statusClass}">${statusClass}</span>` : ''}
+                    </td>
+                </tr>
+            `;
+        }
     }
 
     html += '</table>';

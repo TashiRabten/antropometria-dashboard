@@ -108,6 +108,16 @@
     color: white;
 }
 
+.lab-badge-uihealth {
+    background: linear-gradient(135deg, #6B8DD6 0%, #8E73D6 100%);
+    color: white;
+}
+
+.lab-badge-memorialhealth {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+}
+
 .lab-badge-chart {
     background: linear-gradient(135deg, #45B7D1 0%, #96C93D 100%);
     color: white;
@@ -219,6 +229,61 @@
 .value-status.low {
     background: rgba(255, 152, 0, 0.1);
     color: var(--warning-color);
+}
+
+/* Period Format - Multi-value Display */
+.period-row {
+    background: rgba(102, 126, 234, 0.03);
+}
+
+.period-row .value-name {
+    vertical-align: top;
+    padding-top: 0.75rem;
+}
+
+.datapoints-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.datapoint-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.35rem 0.6rem;
+    background: rgba(102, 126, 234, 0.08);
+    border-radius: 6px;
+    min-width: 60px;
+}
+
+.datapoint-item.abnormal {
+    background: rgba(244, 67, 54, 0.1);
+}
+
+.dp-date {
+    font-size: 0.65rem;
+    color: #888;
+    margin-bottom: 2px;
+}
+
+.dp-value {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--dark-color);
+}
+
+.dp-value.high {
+    color: var(--danger-color);
+}
+
+.dp-value.low {
+    color: var(--warning-color);
+}
+
+.dp-value.normal {
+    color: var(--success-color);
 }
 
 /* Filters Card */
