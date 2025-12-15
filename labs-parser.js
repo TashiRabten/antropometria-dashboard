@@ -1233,16 +1233,17 @@ if (headerMatch) {
                 return false;
             }
             
-            // Only keep dates from last 50 years and not in future
-            const now = new Date();
-            const fiftyYearsAgo = new Date(now.getFullYear() - 50, 0, 1);
-            if (dateObj < fiftyYearsAgo || dateObj > now) {
+            // Only keep dates from reasonable range (1970-2030)
+            const minDate = new Date(1970, 0, 1);
+            const maxDate = new Date(2030, 11, 31);
+            if (dateObj < minDate || dateObj > maxDate) {
                 console.log(`  ⊗ Excluindo data fora do intervalo: ${originalStr} (${dateObj.toLocaleDateString()})`);
                 return false;
             }
-            
+
             console.log(`  ✓ Mantendo data: ${originalStr} (${dateObj.toLocaleDateString('pt-BR')})`);
             return true;
+            
         })
         .map(({ dateObj }) => dateObj);
     
