@@ -1379,6 +1379,7 @@ function extractUIHealthValues(text) {
         }
     }
     console.log(`Pattern 2: ${matchCount2} matches encontrados`);
+    pattern2.lastIndex = 0; 
 
     // Pattern 1: TestName: Value UNIT (High/Low) (Ref: range)
     console.log('\n🔍 Tentando Pattern 1 (com High/Low)...');
@@ -1429,6 +1430,9 @@ function extractUIHealthValues(text) {
             });
         }
     }
+
+    pattern1.lastIndex = 0;  
+
     console.log(`Pattern 1: ${matchCount1} matches encontrados`);
 
     // Pattern 3: TestName: Value UNIT (no ref range)
@@ -1471,6 +1475,9 @@ function extractUIHealthValues(text) {
             });
         }
     }
+
+    pattern3.lastIndex = 0; 
+    
     console.log(`Pattern 3: ${matchCount3} matches encontrados`);
 
     console.log(`\n📊 Total: ${Object.keys(values).length} valores extraídos (UI Health)`);
