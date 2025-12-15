@@ -1304,13 +1304,11 @@ function parseUIHealth(labInfo, text) {
     return labInfo;
 }
 
-// SUBSTITUA A FUNÇÃO extractUIHealthValues NO SEU labs-parser.js
-// Esta versão corrige problemas com Ferritin, B6 e outros testes
-
 function extractUIHealthValues(text) {
     const values = {};
 
     console.log('🔍 Extraindo valores do formato UI Health...');
+    console.log('📄 Texto completo (primeiros 500 chars):', text.substring(0, 500));
 
     // Words that indicate headers, not test names
     const headerWords = ['PATIENT', 'ORDER', 'LABORATORY', 'DEMOGRAPHICS', 'INFORMATION',
@@ -1319,24 +1317,89 @@ function extractUIHealthValues(text) {
                          'AGE', 'SEX', 'DOB', 'NAME', 'MR #', 'ACCOUNT', 'PENDING', 'COLLECTED',
                          'RECEIVED', 'REPORTED', 'ORDERING', 'TOTAL', 'STANDARD', 'RANGE', 'RESULT'];
 
-    // Pattern 1: TestName: Value UNIT (High/Low) (Ref: range)
-    const pattern1 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Za-z\/\*%0-9]+)\s+\((?:High|Low)\)\s+\(Ref:\s*([^)]+)\)/gi;
 
-    // Pattern 2: TestName: Value UNIT (Ref: range) - without High/Low
+    // Pattern 2: TestName: Value UNIT (Ref: range) - sem High/Low
+    console.log('\n🔍 Tentando Pattern 2 (sem High/Low)...');
     const pattern2 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,70}?):\s*([\d.]+)\s+([A-Za-z][A-Za-z\/\*%0-9]+)\s+\(Ref:\s*([^)]+)\)/gi;
 
-
-    // Pattern 3: TestName: Value UNIT (no ref range)
-    const pattern3 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Za-z\/\*%0-9]+)(?:\s|$)/gi;
-
-    let match;
-
-    // Try Pattern 1 first (with High/Low flag)
-    while ((match = pattern1.exec(text)) !== null) {
+    let matchCount2 = 0;
+    while ((match = pattern2.exec(text)) !== null) {
+        matchCount2++;
         const testName = cleanTestName(match[1]);
         const value = parseFloat(match[2]);
         const unit = match[3];
         const refRange = match[4].trim();
+
+        console.log(`  📌 Match ${matchCount2}:`, {
+            raw: match[1],
+            cleaned: testName,
+            value,
+            unit,
+            refRange
+        });
+
+        const upperName = testName.toUpperCase();
+        const isHeader = headerWords.some(hw => upperName.includes(hw));
+
+        if (testName && !isNaN(value) && !values[testName] && !isHeader) {
+            let status = 'normal';
+            const rangeMatch = refRange.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/);
+            if (rangeMatch) {
+                const low = parseFloat(rangeMatch[1]);
+                const high = parseFloat(rangeMatch[2]);
+                if (value < low) status = 'low';
+                else if (value > high) status = 'high';
+                console.log(`  📊 Range check: ${value} vs [${low}-${high}] = ${status}`);
+            } else if (refRange.startsWith('<')) {
+                const threshold = parseFloat(refRange.replace(/[<>]/g, ''));
+                if (!isNaN(threshold) && value >= threshold) status = 'high';
+                console.log(`  📊 Threshold check: ${value} < ${threshold} = ${status}`);
+            } else if (refRange.startsWith('>')) {
+                const threshold = parseFloat(refRange.replace(/[<>]/g, ''));
+                if (!isNaN(threshold) && value < threshold) status = 'low';
+                console.log(`  📊 Threshold check: ${value} > ${threshold} = ${status}`);
+            }
+
+            values[testName] = {
+                value: value,
+                unit: unit,
+                range: refRange,
+                status: status
+            };
+            console.log(`  ✅ ${testName}: ${value} ${unit} (${status}) [Pattern 2]`);
+        } else {
+            console.log(`  ❌ Rejeitado:`, {
+                reason: !testName ? 'nome vazio' : 
+                        isNaN(value) ? 'valor inválido' : 
+                        values[testName] ? 'já existe' : 
+                        isHeader ? 'é header' : 'outro',
+                testName,
+                isHeader
+            });
+        }
+    }
+    console.log(`Pattern 2: ${matchCount2} matches encontrados`);
+
+    // Pattern 1: TestName: Value UNIT (High/Low) (Ref: range)
+    console.log('\n🔍 Tentando Pattern 1 (com High/Low)...');
+    const pattern1 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,70}?):\s*([\d.]+)\s+([A-Za-z][A-Za-z\/\*%0-9]+)\s+\((?:High|Low)\)\s+\(Ref:\s*([^)]+)\)/gi;
+
+    let match;
+    let matchCount1 = 0;
+    while ((match = pattern1.exec(text)) !== null) {
+        matchCount1++;
+        const testName = cleanTestName(match[1]);
+        const value = parseFloat(match[2]);
+        const unit = match[3];
+        const refRange = match[4].trim();
+
+        console.log(`  📌 Match ${matchCount1}:`, {
+            raw: match[1],
+            cleaned: testName,
+            value,
+            unit,
+            refRange
+        });
 
         const upperName = testName.toUpperCase();
         const isHeader = headerWords.some(hw => upperName.includes(hw));
@@ -1356,51 +1419,37 @@ function extractUIHealthValues(text) {
                 range: refRange,
                 status: status
             };
-            console.log(`  ✓ ${testName}: ${value} ${unit} (${status}) [Pattern 1]`);
+            console.log(`  ✅ ${testName}: ${value} ${unit} (${status}) [Pattern 1]`);
+        } else {
+            console.log(`  ❌ Rejeitado:`, {
+                reason: !testName ? 'nome vazio' : 
+                        isNaN(value) ? 'valor inválido' : 
+                        values[testName] ? 'já existe' : 
+                        isHeader ? 'é header' : 'outro'
+            });
         }
     }
+    console.log(`Pattern 1: ${matchCount1} matches encontrados`);
 
-    // Try Pattern 2 (without High/Low flag)
-    while ((match = pattern2.exec(text)) !== null) {
-        const testName = cleanTestName(match[1]);
-        const value = parseFloat(match[2]);
-        const unit = match[3];
-        const refRange = match[4].trim();
+    // Pattern 3: TestName: Value UNIT (no ref range)
+    console.log('\n🔍 Tentando Pattern 3 (sem ref range)...');
+    const pattern3 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,70}?):\s*([\d.]+)\s+([A-Za-z][A-Za-z\/\*%0-9]+)(?:\s|$)/gi;
 
-        const upperName = testName.toUpperCase();
-        const isHeader = headerWords.some(hw => upperName.includes(hw));
-
-        if (testName && !isNaN(value) && !values[testName] && !isHeader) {
-            let status = 'normal';
-            const rangeMatch = refRange.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/);
-            if (rangeMatch) {
-                const low = parseFloat(rangeMatch[1]);
-                const high = parseFloat(rangeMatch[2]);
-                if (value < low) status = 'low';
-                else if (value > high) status = 'high';
-            } else if (refRange.startsWith('<')) {
-                const threshold = parseFloat(refRange.replace(/[<>]/g, ''));
-                if (!isNaN(threshold) && value >= threshold) status = 'high';
-            } else if (refRange.startsWith('>')) {
-                const threshold = parseFloat(refRange.replace(/[<>]/g, ''));
-                if (!isNaN(threshold) && value < threshold) status = 'low';
-            }
-
-            values[testName] = {
-                value: value,
-                unit: unit,
-                range: refRange,
-                status: status
-            };
-            console.log(`  ✓ ${testName}: ${value} ${unit} (${status}) [Pattern 2]`);
-        }
-    }
-
-    // Try Pattern 3 (no ref range - for calculated values)
+    let matchCount3 = 0;
     while ((match = pattern3.exec(text)) !== null) {
+        matchCount3++;
         const testName = cleanTestName(match[1]);
         const value = parseFloat(match[2]);
         const unit = match[3];
+
+        if (matchCount3 <= 5) {
+            console.log(`  📌 Match ${matchCount3}:`, {
+                raw: match[1],
+                cleaned: testName,
+                value,
+                unit
+            });
+        }
 
         const upperName = testName.toUpperCase();
         const isHeader = headerWords.some(hw => upperName.includes(hw));
@@ -1412,53 +1461,24 @@ function extractUIHealthValues(text) {
                 range: '',
                 status: 'normal'
             };
-            console.log(`  ✓ ${testName}: ${value} ${unit} [Pattern 3]`);
+            console.log(`  ✅ ${testName}: ${value} ${unit} [Pattern 3]`);
+        } else if (matchCount3 <= 5) {
+            console.log(`  ❌ Rejeitado:`, {
+                reason: !testName ? 'nome vazio' : 
+                        isNaN(value) ? 'valor inválido' : 
+                        values[testName] ? 'já existe' : 
+                        isHeader ? 'é header' : 'outro'
+            });
         }
     }
+    console.log(`Pattern 3: ${matchCount3} matches encontrados`);
 
-    // Pattern 4: Handle tests with commas in names (like "Vitamin B6, Pyridoxal 5-Phosphate")
-    const pattern4 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,70}?):\s*([\d.]+)\s+([A-Z][A-Za-z\/\*%0-9]+)(?:\s+\((?:High|Low)\))?\s*\(Ref:\s*([^)]+)\)/gi;
-    
-    while ((match = pattern4.exec(text)) !== null) {
-        const testName = cleanTestName(match[1]);
-        const value = parseFloat(match[2]);
-        const unit = match[3];
-        const refRange = match[4].trim();
-
-        const upperName = testName.toUpperCase();
-        const isHeader = headerWords.some(hw => upperName.includes(hw));
-
-        if (testName && !isNaN(value) && !values[testName] && !isHeader && testName.length > 2) {
-            let status = 'normal';
-            const contextStart = Math.max(0, match.index);
-            const contextEnd = Math.min(text.length, match.index + match[0].length + 20);
-            const context = text.substring(contextStart, contextEnd);
-
-            if (context.includes('(High)')) status = 'high';
-            else if (context.includes('(Low)')) status = 'low';
-            else {
-                const rangeMatch = refRange.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/);
-                if (rangeMatch) {
-                    const low = parseFloat(rangeMatch[1]);
-                    const high = parseFloat(rangeMatch[2]);
-                    if (value < low) status = 'low';
-                    else if (value > high) status = 'high';
-                }
-            }
-
-            values[testName] = {
-                value: value,
-                unit: unit,
-                range: refRange,
-                status: status
-            };
-            console.log(`  ✓ ${testName}: ${value} ${unit} (${status}) [Pattern 4 - comma names]`);
-        }
-    }
-
-    console.log(`📊 Total: ${Object.keys(values).length} valores extraídos (UI Health)`);
+    console.log(`\n📊 Total: ${Object.keys(values).length} valores extraídos (UI Health)`);
+    console.log('✅ Valores extraídos:', Object.keys(values));
     return values;
 }
+
+
 // Parse Follow My Health Format
 function parseFollowMyHealth(labInfo, text) {
     console.log('📋 Parseando formato Follow My Health...');
