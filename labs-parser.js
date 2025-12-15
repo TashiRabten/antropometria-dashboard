@@ -103,20 +103,72 @@ async function scanLabFiles() {
 //     // See labs-upload.js parseFileForFirebase()
 // }
 
+// Clean lab type - remove garbage from extracted lab type names
+function cleanLabType(labType) {
+    if (!labType) return 'Exame';
+    return labType
+        .replace(/^(CA|No,?\s*PCP)\s+/gi, '')  // Remove "CA " or "No, PCP " prefix
+        .replace(/\s+(NAME|VALUE|REFERENCE|RANGE|RESULT)[\s\S]*/gi, '')  // Remove table headers
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+
 // Identify lab type from filename
 function identifyLabTypeFromFilename(filename) {
     const nameLower = filename.toLowerCase();
 
-    // Check for specific lab types in filename
+    // Check for specific lab types in filename (order matters - more specific first)
+
+    // Bone density (check before vitamin D to avoid "D Bone" matching vitamin D)
+    if (nameLower.includes('bone') || nameLower.includes('densidade') || nameLower.includes('axial skeleton')) {
+        return 'Densidade Óssea';
+    }
+
+    // Vitamins (check specific vitamins before generic patterns)
+    if (nameLower.includes('vitamin_k') || nameLower.includes('vitamin k') || nameLower.includes('k vitamin')) {
+        return 'Vitamina K';
+    }
+    if (nameLower.includes('vitamin_e') || nameLower.includes('vitamin e')) {
+        return 'Vitamina E';
+    }
+    if (nameLower.includes('vitamin_a') || nameLower.includes('vitamin a')) {
+        return 'Vitamina A';
+    }
+    if (nameLower.includes('vitamin_c') || nameLower.includes('vitamin c') || nameLower.includes('vit c')) {
+        return 'Vitamina C';
+    }
+    if (nameLower.includes('vitamin_d') || nameLower.includes('vitamin d') || nameLower.includes('vit d')) {
+        return 'Vitamina D';
+    }
+
+    // Thyroid tests
+    if (nameLower.includes('tsh') || nameLower.includes('thyroid')) {
+        return 'TSH';
+    }
+    if (nameLower.includes('t4')) {
+        return 'T4';
+    }
+    if (nameLower.includes('t3')) {
+        return 'T3';
+    }
+
+    // Metabolic panels
     if (nameLower.includes('cmp') || nameLower.includes('comprehensive metabolic')) {
         return 'CMP';
     }
-    if (nameLower.includes('cbc') || nameLower.includes('hemograma')) {
+
+    // Blood counts (check CBC before diff)
+    if (nameLower.includes('cbc') || nameLower.includes('hemograma') || nameLower.includes('csc')) {
         return 'CBC';
     }
-    // Check B1 BEFORE B12 to avoid false match
-    // B1.pdf should be B1 (Tiamina), not B12
-    if (nameLower === 'b1.pdf') {
+
+    // Lipids (check before diff to avoid false match)
+    if (nameLower.includes('lipid')) {
+        return 'Lipídios';
+    }
+
+    // B vitamins (check B1 before B12)
+    if (nameLower === 'b1.pdf' || nameLower.includes('thiamin')) {
         return 'B1';
     }
     if (nameLower.includes('b12') || nameLower.includes('b_12')) {
@@ -125,6 +177,8 @@ function identifyLabTypeFromFilename(filename) {
     if (nameLower.includes('b6')) {
         return 'B6';
     }
+
+    // Other specific tests
     if (nameLower.includes('ferritin') || nameLower.includes('ferretin')) {
         return 'Ferritina';
     }
@@ -134,13 +188,35 @@ function identifyLabTypeFromFilename(filename) {
     if (nameLower.includes('crp') || nameLower.includes('c protein') || nameLower.includes('proteina')) {
         return 'PCR';
     }
+    if (nameLower.includes('iron')) {
+        return 'Ferro';
+    }
+    if (nameLower.includes('pth') || nameLower.includes('parathyroid')) {
+        return 'PTH';
+    }
+    if (nameLower.includes('prealbumin')) {
+        return 'Prealbumina';
+    }
+    if (nameLower.includes('a1c') || nameLower.includes('hemo')) {
+        return 'A1C';
+    }
+    if (nameLower.includes('total ck') || nameLower.includes('ck')) {
+        return 'CK Total';
+    }
+    if (nameLower.includes('endocrinology')) {
+        return 'Endocrinologia';
+    }
+    if (nameLower.includes('protein_marker') || nameLower.includes('protein marker')) {
+        return 'Marcadores Proteicos';
+    }
+
+    // Differentials (check after lipid)
     if (nameLower.includes('blood diff') || nameLower.includes('diff')) {
         return 'Diferencial';
     }
-    if (nameLower.includes('bone') || nameLower.includes('densidade')) {
-        return 'Densidade Óssea';
-    }
-    if (nameLower.includes('lab_a')) {
+
+    // Charts/images
+    if (nameLower.includes('lab_a') || nameLower.includes('lab_')) {
         return 'Gráfico';
     }
 
@@ -304,7 +380,7 @@ function parseMyChartSingle(labInfo, text) {
                 .replace(/\s+W\/.*$/i, '')  // Remove "W/..." suffix
                 .replace(/\s+AND\s+/gi, ' & ')  // Replace AND with &
                 .trim();
-            labInfo.labType = genericTitle;
+            labInfo.labType = cleanLabType(genericTitle);
             console.log('🏷️ Título genérico encontrado (MyChart):', labInfo.labType);
         } else {
             console.log('⚠️ Nenhum título encontrado no texto');
@@ -767,19 +843,17 @@ function parseHealow(labInfo, text) {
         // Pattern: "LIPID PANEL, EXTENDED *"
         const asteriskMatch = text.match(/([A-Z][A-Z\s\d\-\/\(\),&]{4,60}?)\s*\*/);
         if (asteriskMatch) {
-            labInfo.labType = asteriskMatch[1]
+            labInfo.labType = cleanLabType(asteriskMatch[1]
                 .replace(/\s+AND\s+/gi, ' & ')
-                .replace(/,?\s*(EXTENDED|W\/.*|WITH.*)$/i, '')  // Remove suffixes like ", EXTENDED"
-                .trim();
+                .replace(/,?\s*(EXTENDED|W\/.*|WITH.*)$/i, ''));
             console.log('🏷️ Título encontrado antes do asterisco (Healow):', labInfo.labType);
         } else {
             // Second fallback: Look for pattern "TITLE  F   " (Healow without asterisk)
             const healowPattern = text.match(/\b([A-Z][A-Z\s\d\-\/\(\),&]{4,60}?)\s{2,}F\s{2,}/);
             if (healowPattern) {
-                labInfo.labType = healowPattern[1]
+                labInfo.labType = cleanLabType(healowPattern[1]
                     .replace(/\s+AND\s+/gi, ' & ')
-                    .replace(/,?\s+(INTACT|TOTAL|FREE)$/, ', $1')
-                    .trim();
+                    .replace(/,?\s+(INTACT|TOTAL|FREE)$/, ', $1'));
                 console.log('🏷️ Título encontrado por padrão F (Healow):', labInfo.labType);
             } else {
                 // Third fallback: Look for ALL-CAPS text in first few lines
@@ -792,7 +866,7 @@ function parseHealow(labInfo, text) {
                         !trimmed.includes('FINAL RESULT') &&
                         !trimmed.includes('BLOOD') &&
                         !trimmed.includes('ACCESSION')) {
-                        labInfo.labType = trimmed.replace(/\s+AND\s+/gi, ' & ').trim();
+                        labInfo.labType = cleanLabType(trimmed.replace(/\s+AND\s+/gi, ' & '));
                         console.log('🏷️ Título genérico encontrado (Healow):', labInfo.labType);
                         break;
                     }
@@ -912,17 +986,16 @@ function parseMyChartPeriod(labInfo, text) {
         else if (title.match(/LIPID/i)) labInfo.labType = 'Lipídios';
         else if (title.match(/THYROID/i)) labInfo.labType = 'TSH';
         else if (title.match(/TOTAL CK/i)) labInfo.labType = 'CK Total';
-        else labInfo.labType = title.trim();
+        else labInfo.labType = cleanLabType(title);
         console.log('🏷️ Tipo identificado:', labInfo.labType);
     } else {
         // Fallback: Extract any ALL-CAPS title before "- Past Results" or just before "Standard Range"
         const genericMatch = text.match(/([A-Z][A-Z\s\d\-\/\(\),&]{4,80}?)\s*-?\s*Past Results/i) ||
                              text.match(/([A-Z][A-Z\s\d\-\/\(\),&]{4,80}?)\s{2,}Name\s+Standard Range/);
         if (genericMatch) {
-            labInfo.labType = genericMatch[1]
+            labInfo.labType = cleanLabType(genericMatch[1]
                 .replace(/\s+AND\s+/gi, ' & ')
-                .replace(/,?\s+(TOTAL|FREE|INTACT)$/, ', $1')
-                .trim();
+                .replace(/,?\s+(TOTAL|FREE|INTACT)$/, ', $1'));
             console.log('🏷️ Título genérico encontrado (Period):', labInfo.labType);
         }
     }
@@ -980,7 +1053,7 @@ function parseUIHealth(labInfo, text) {
         else if (sectionName.includes('CBC W DIFFERENTIAL') || sectionName.includes('CBC W')) labInfo.labType = 'CBC';
         else if (sectionName.includes('LIPID')) labInfo.labType = 'Lipídios';
         else if (sectionName.includes('ENDOCRINOLOGY')) labInfo.labType = 'Endocrinologia';
-        else labInfo.labType = sectionName;
+        else labInfo.labType = cleanLabType(sectionName);
 
         console.log(`🏷️ Tipo de exame: ${labInfo.labType}`);
     }
