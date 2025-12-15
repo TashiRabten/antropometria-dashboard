@@ -1439,145 +1439,114 @@ function parseFollowMyHealth(labInfo, text) {
     console.log(`📊 ${Object.keys(labInfo.values).length} valores extraídos`);
 
     return labInfo;
-}
-// Extract values from Follow My Health format
+}// Replace extractFollowMyHealthValues function with this approach:
+
 function extractFollowMyHealthValues(text) {
     const values = {};
 
     console.log('🔍 Extraindo valores do formato Follow My Health...');
 
-    // Follow My Health has a tabular format with columns:
-    // Name | Resulted On | Value | Units | Range | Source
-    // But in extracted text, columns appear on separate lines
-
-    // Strategy: Look for known test names, then find the value in nearby lines
-
-    const testPatterns = [
-        { name: 'WBC', patterns: [/\bWBC\b/i], unit: 'K/UL' },
-        { name: 'RBC', patterns: [/\bRBC\b/i], unit: 'M/UL' },
-        { name: 'Hemoglobin', patterns: [/HEMOGLOBIN\s*\(HGB\)/i, /\bHGB\b/i, /^HEMOGLOBIN$/i], unit: 'G/DL' },
-        { name: 'Hematocrit', patterns: [/HEMATOCRIT\s*\(HCT\)/i, /\bHCT\b/i, /^HEMATOCRIT$/i], unit: '%' },
-        { name: 'MCV', patterns: [/\bMCV\b/i], unit: 'FL' },
-        { name: 'MCH', patterns: [/\bMCH\b(?!C)/i], unit: 'PG' },
-        { name: 'MCHC', patterns: [/\bMCHC\b/i], unit: 'G/DL' },
-        { name: 'RDW-SD', patterns: [/\bRDW-SD\b/i, /\bRDW SD\b/i], unit: 'fL' },
-        { name: 'Platelets', patterns: [/\bPLT\b/i, /^PLATELET/i], unit: 'K/UL' },
-        { name: 'MPV', patterns: [/\bMPV\b/i], unit: 'FL' },
-        { name: 'Neutrophils %', patterns: [/\bNEU%\b/i, /^NEU%$/], unit: '%' },
-        { name: 'Lymphocytes %', patterns: [/\bLYM%\b/i, /^LYM%$/], unit: '%' },
-        { name: 'Monocytes %', patterns: [/\bMONO%\b/i, /^MONO%$/], unit: '%' },
-        { name: 'Eosinophils %', patterns: [/\bEOS%\b/i, /^EOS%$/], unit: '%' },
-        { name: 'Basophils %', patterns: [/\bBASO%\b/i, /^BASO%$/], unit: '%' },
-        { name: 'Neutrophils Abs', patterns: [/\bABS\s*NEU\b/i, /^ABS NEU$/i], unit: 'K/UL' },
-        { name: 'Lymphocytes Abs', patterns: [/\bABS\s*LYM\b/i, /^ABS LYM$/i], unit: 'K/UL' },
-        { name: 'Monocytes Abs', patterns: [/\bABS\s*MONO\b/i, /^ABS MONO$/i], unit: 'K/UL' },
-        { name: 'Eosinophils Abs', patterns: [/\bABS\s*EOS\b/i, /^ABS EOS$/i], unit: 'K/UL' },
-        { name: 'Basophils Abs', patterns: [/\bABS\s*BASO\b/i, /^ABS BASO$/i], unit: 'K/UL' },
-        { name: 'Immature Granulocytes %', patterns: [/\bIMM\.?\s*GRAN\s*%/i, /^IMM\. GRAN %$/i], unit: '%' },
-        { name: 'Immature Granulocytes Abs', patterns: [/\bABS\s*IMM\.?\s*GRAN/i], unit: 'K/UL' },
-        { name: 'NRBC %', patterns: [/\bNRBC\s*%/i], unit: '%' },
-        { name: 'NRBC Abs', patterns: [/\bABS\s*NRBC/i], unit: 'K/UL' },
-        { name: 'Cholesterol', patterns: [/^CHOLESTEROL$/i], unit: 'mg/dL' },
-        { name: 'Triglycerides', patterns: [/^TRIGLYCERIDES$/i], unit: 'mg/dL' },
-        { name: 'HDL', patterns: [/^HDL$/i, /^HDL CHOLESTEROL$/i], unit: 'mg/dL' },
-        { name: 'LDL', patterns: [/^LDL,?\s*CALCULATED$/i, /^LDL$/i], unit: 'mg/dL' },
-        { name: 'VLDL', patterns: [/^VLDL$/i], unit: 'mg/dL' },
-        { name: 'Chol/HDL Ratio', patterns: [/^CHOL\/HDL$/i, /CHOLESTEROL\/HDL/i], unit: '' },
-        { name: 'Hemoglobin A1C', patterns: [/^HEMOGLOBIN\s*A1C$/i, /^A1C$/i, /^HBA1C$/i], unit: '% A1C' },
-        { name: 'Estimated Avg Glucose', patterns: [/ESTIMATED\s*AVERAGE\s*GLUCOSE/i, /^EAG$/i], unit: 'mg/dL' },
-        { name: 'Iron', patterns: [/^IRON$/i], unit: 'ug/dL' },
-        { name: 'Iron Saturation %', patterns: [/^%\s*SATURATION$/i, /^SATURATION\s*%$/i], unit: '%' },
-        { name: 'Ferritin', patterns: [/^FERRITIN$/i], unit: 'NG/ML' },
-        { name: 'TIBC', patterns: [/^TIBC$/i], unit: 'ug/dL' }
-    ];
+    // Follow My Health has tabular data, but when extracted as text,
+    // each row appears as: TestName Date Value Unit Range Source
+    // Strategy: Find lines with the test name, extract the numeric value and range
 
     const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-    // Process each line looking for test names
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
+    // Common test names in Follow My Health
+    const testNames = [
+        'WBC', 'RBC', 'HEMOGLOBIN (HGB)', 'HEMATOCRIT (HCT)', 
+        'MCV', 'MCH', 'MCHC', 'RDW-SD', 'PLT', 'MPV',
+        'NEU%', 'LYM%', 'MONO%', 'EOS%', 'BASO%',
+        'ABS NEU', 'ABS LYM', 'ABS MONO', 'ABS EOS', 'ABS BASO',
+        'IMM. GRAN %', 'ABS IMM. GRAN', 'NRBC %', 'ABS NRBC',
+        'CHOLESTEROL', 'TRIGLYCERIDES', 'HDL', 'LDL, CALCULATED', 'VLDL',
+        'CHOL/HDL', 'HEMOGLOBIN A1C', 'ESTIMATED AVERAGE GLUCOSE',
+        'IRON', '% SATURATION', 'FERRITIN', 'TIBC'
+    ];
 
-        // Try to match against known tests
-        for (const test of testPatterns) {
-            let matched = false;
-            for (const pattern of test.patterns) {
-                if (pattern.test(line)) {
-                    matched = true;
+    for (const testName of testNames) {
+        // Find line containing this test name
+        const lineIndex = lines.findIndex(line => {
+            // Exact match or starts with test name
+            return line === testName || line.startsWith(testName + ' ');
+        });
+
+        if (lineIndex === -1) continue;
+
+        // The value and range are in the following lines
+        // Pattern: next lines contain date, then value, then unit, then range
+        let foundValue = null;
+        let foundUnit = '';
+        let foundRange = '';
+
+        for (let j = lineIndex + 1; j < Math.min(lineIndex + 8, lines.length); j++) {
+            const line = lines[j];
+
+            // Skip date lines (MM/DD/YYYY)
+            if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(line)) continue;
+
+            // Skip source line
+            if (line.includes('myHealth@SC')) break;
+
+            // If we haven't found the value yet, check if this line is a number
+            if (foundValue === null) {
+                const numMatch = line.match(/^([\d.]+)$/);
+                if (numMatch) {
+                    foundValue = parseFloat(numMatch[1]);
+                    continue;
+                }
+            }
+
+            // If we have the value but not the unit, check for unit
+            if (foundValue !== null && !foundUnit) {
+                // Unit lines are typically short uppercase with /
+                if (/^[A-Z\/%]+$/.test(line) && line.length < 10) {
+                    foundUnit = line;
+                    continue;
+                }
+            }
+
+            // If we have value and unit, look for range
+            if (foundValue !== null && foundUnit && !foundRange) {
+                // Range patterns: "X-Y" or "<X" or ">X"
+                if (/^[\d.\-<>]+$/.test(line)) {
+                    foundRange = line;
                     break;
                 }
             }
+        }
 
-            if (matched && !values[test.name]) {
-                // Found a test name, now look for the value in following lines
-                // Skip date line, then value should be next
-                let foundValue = null;
-                let foundRange = '';
-
-                for (let j = i + 1; j < Math.min(i + 15, lines.length); j++) {
-                    const nextLine = lines[j];
-
-                    // Skip date lines (MM/DD/YYYY format)
-                    if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(nextLine)) continue;
-
-                    // Skip myHealth@SC
-                    if (nextLine.includes('myHealth@SC')) break;
-
-                    // Skip unit lines if they match expected unit
-                    if (test.unit && nextLine === test.unit) continue;
-                    if (/^[A-Z\/%]+$/.test(nextLine) && nextLine.length < 8) continue;
-
-                    // Check if this is a numeric value
-                    const numMatch = nextLine.match(/^([\d.]+)$/);
-                    if (numMatch && foundValue === null) {
-                        foundValue = parseFloat(numMatch[1]);
-                        continue;
-                    }
-
-                    // Check if this is a range
-                    if ((nextLine.includes('-') || nextLine.startsWith('<') || nextLine.startsWith('>')) && 
-                        /[\d.]/.test(nextLine) && !foundRange) {
-                        foundRange = nextLine.replace(/\s+/g, '');
-                        continue;
-                    }
-
-                    // If we've found both value and range, we're done
-                    if (foundValue !== null && foundRange) break;
-                }
-
-                if (foundValue !== null && !isNaN(foundValue)) {
-                    // Determine status from range
-                    let status = 'normal';
-                    const rangeMatch = foundRange.match(/([\d.]+)\s*-\s*([\d.]+)/);
-                    if (rangeMatch) {
-                        const low = parseFloat(rangeMatch[1]);
-                        const high = parseFloat(rangeMatch[2]);
-                        if (foundValue < low) status = 'low';
-                        else if (foundValue > high) status = 'high';
-                    } else if (foundRange.startsWith('<')) {
-                        const threshold = parseFloat(foundRange.replace(/[<>]/g, ''));
-                        if (!isNaN(threshold) && foundValue >= threshold) status = 'high';
-                    } else if (foundRange.startsWith('>')) {
-                        const threshold = parseFloat(foundRange.replace(/[<>]/g, ''));
-                        if (!isNaN(threshold) && foundValue <= threshold) status = 'low';
-                    }
-
-                    values[test.name] = {
-                        value: foundValue,
-                        unit: test.unit,
-                        range: foundRange,
-                        status: status
-                    };
-                    console.log(`  ✓ ${test.name}: ${foundValue} ${test.unit} (${status}) [Range: ${foundRange}]`);
-                }
-
-                break; // Found this test, move to next line
+        if (foundValue !== null && !isNaN(foundValue)) {
+            // Determine status from range
+            let status = 'normal';
+            const rangeMatch = foundRange.match(/([\d.]+)-([\d.]+)/);
+            if (rangeMatch) {
+                const low = parseFloat(rangeMatch[1]);
+                const high = parseFloat(rangeMatch[2]);
+                if (foundValue < low) status = 'low';
+                else if (foundValue > high) status = 'high';
             }
+
+            // Normalize test name for display
+            let displayName = testName.replace(' (HGB)', '').replace(' (HCT)', '');
+            if (displayName.startsWith('ABS ')) {
+                displayName = displayName.replace('ABS ', '') + ' Abs';
+            }
+
+            values[displayName] = {
+                value: foundValue,
+                unit: foundUnit,
+                range: foundRange,
+                status: status
+            };
+            console.log(`  ✓ ${displayName}: ${foundValue} ${foundUnit} (${status}) [Range: ${foundRange}]`);
         }
     }
 
     console.log(`📊 Total: ${Object.keys(values).length} valores extraídos (Follow My Health)`);
     return values;
 }
+
 
 // Parse Memorial Health Format (clean OCR'd lab reports)
 function parseMemorialHealth(labInfo, text) {
