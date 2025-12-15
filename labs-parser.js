@@ -1251,8 +1251,12 @@ if (headerMatch) {
     console.log('⚠️ Header pattern not matched');
 }
 
-labInfo.dates = headerDates;
-
+// Converter datas para timestamps antes de salvar
+    labInfo.dates = headerDates.map(d => d.getTime());
+    
+if (labInfo.dates && labInfo.dates.length > 0) {
+    labInfo.collectionDate = labInfo.dates[labInfo.dates.length - 1];
+}
     // Extract multi-date values
     labInfo.values = extractPeriodValues(text, headerDates);
     console.log(`📊 ${Object.keys(labInfo.values).length} marcadores extraídos`);
@@ -1766,6 +1770,12 @@ function extractMemorialHealthValues(text) {
 // Extract values from period format
 function extractPeriodValues(text, dates) {
     const values = {};
+
+    dataPoints.push({
+    date: dates[j].getTime(), // Converte Date para timestamp numérico
+    value: value,
+    status: status
+});
 
     console.log('🔍 Extraindo valores do formato período...');
     console.log(`📅 Datas disponíveis: ${dates.length}`);
@@ -2407,8 +2417,7 @@ function displayExtractedValues(values) {
                             ${data.dataPoints.map(dp => {
                                 const dpAbnormal = dp.status && dp.status !== 'normal';
                                 const dpStatusClass = dp.status || 'normal';
-                                const dateStr = dp.date ? new Date(dp.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'}) : '';
-                                return `<div class="datapoint-item ${dpAbnormal ? 'abnormal' : ''}">
+                                const dateStr = dp.date ? new Date(dp.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'}) : '';                                return `<div class="datapoint-item ${dpAbnormal ? 'abnormal' : ''}">
                                     <span class="dp-date">${dateStr}</span>
                                     <span class="dp-value ${dpStatusClass}">${dp.value}</span>
                                 </div>`;
