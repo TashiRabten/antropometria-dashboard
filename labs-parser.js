@@ -420,22 +420,36 @@ function cleanTestName(name) {
         .replace(/^(New|Old|Final|Preliminary)\s+/i, '')
         .replace(/\s*(PM|AM)\s+Page\s+\d+\s+of\s+\d+\s*/gi, '')
         .replace(/[\r\n]+/g, ' ')
-        .replace(/^[\d.]+\s*(?:mg\/dL|ug\/dL|mmol\/L|g\/dL|mL\/min\/m2|mL\/min|U\/L|%|fL|pg|10\*[36]\/uL)\s*/gi, '')  // "61 U/L" prefix
-        .replace(/^(?:mg\/dL|ug\/dL|mmol\/L|g\/dL|mL\/min|U\/L|uL|fL|pg|%)\s+/i, '')  // unit prefix alone
-        .replace(/^10\*[36]\/uL\s+/i, '')  // "10*3/uL" prefix
-        .replace(/^m2\s+/i, '')  // "m2" fragment
-        .replace(/^Value\s+[\d.]+\s*/gi, '')  // "Value 21" prefix
-        .replace(/^[\d.]+\s+Value\s+[\d.]+\s*/gi, '')  // "61 Value 21" prefix
-        .replace(/^(?:[\d.]+\s+){2,}(?=\D)/g, '')  // Remove repeated numbers "150 150 450 450 206 " before text
-        .replace(/^[\d.]+\s+(?=[A-Za-z])/g, '')  // leading single number "99 eGFR" -> "eGFR"
+        // Remove reference range patterns at start: "0.9 - 11.2)" or "12 - 88)"
+        .replace(/^[\d.]+\s*-\s*[\d.]+\s*\)\s*/g, '')
+        // Remove "Ref:" patterns
+        .replace(/^\(Ref:\s*[^)]+\)\s*/gi, '')
+        // Remove unit prefixes with numbers
+        .replace(/^[\d.]+\s*(?:mg\/dL|ug\/dL|mmol\/L|g\/dL|mL\/min\/m2|mL\/min|U\/L|%|fL|pg|PG\/ML|NG\/ML|K\/UL|GM\/DL|10\*[36]\/uL)\s*/gi, '')
+        // Remove unit prefix alone
+        .replace(/^(?:mg\/dL|ug\/dL|mmol\/L|g\/dL|mL\/min|U\/L|uL|fL|pg|PG\/ML|NG\/ML|K\/UL|GM\/DL|%)\s+/i, '')
+        .replace(/^10\*[36]\/uL\s+/i, '')
+        .replace(/^m2\s+/i, '')
+        .replace(/^Value\s+[\d.]+\s*/gi, '')
+        .replace(/^[\d.]+\s+Value\s+[\d.]+\s*/gi, '')
+        // Remove repeated "Yes" or "No" patterns
+        .replace(/^(?:Yes\s+|No\s+)+/gi, '')
+        // Remove repeated numbers
+        .replace(/^(?:[\d.]+\s+){2,}(?=\D)/g, '')
+        // Remove leading single number
+        .replace(/^[\d.]+\s+(?=[A-Za-z])/g, '')
         .replace(/^(or greater|or less)\s+/i, '')
         .replace(/.*?(MD|DO|PA|NP)\s*\([^)]*\)\s*/gi, '')
-        .replace(/^(High|Low)\s+/i, '')
+        .replace(/^(High|Low|Normal)\s+/i, '')
+        // Remove trailing "normal", "high", "low"
+        .replace(/\s+(normal|high|low)$/i, '')
         .replace(/\s{2,}/g, ' ')
         .trim();
 
     // Run number removal again in case there are still leading numbers
     cleaned = cleaned.replace(/^[\d.]+\s+(?=[A-Za-z])/g, '').trim();
+    // Remove any remaining leading parenthesis with range
+    cleaned = cleaned.replace(/^[\d.\-\s]+\)\s*/g, '').trim();
 
     return cleaned;
 }
