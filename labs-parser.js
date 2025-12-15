@@ -1116,7 +1116,7 @@ function extractUIHealthValues(text) {
                          'PANEL', 'COMPREHENSIVE', 'METABOLIC', 'DIFFERENTIAL', 'ENDOCRINOLOGY',
                          'LIPID', 'PROTEIN', 'MARKERS', 'CBC', 'CLIENT', 'PROVIDER', 'ACCESSION',
                          'AGE', 'SEX', 'DOB', 'NAME', 'MR #', 'ACCOUNT', 'PENDING', 'COLLECTED',
-                         'RECEIVED', 'REPORTED', 'ORDERING'];
+                         'RECEIVED', 'REPORTED', 'ORDERING', 'TOTAL', 'STANDARD', 'RANGE', 'RESULT'];
 
     let match;
 
@@ -1317,12 +1317,16 @@ function extractPeriodValues(text, dates) {
                 }
 
                 if (dataPoints.length > 0) {
+                    // Get the most recent value for UI compatibility
+                    const latestPoint = dataPoints[dataPoints.length - 1];
                     values[testName] = {
+                        value: latestPoint.value,
                         unit: unit,
                         range: range,
-                        dataPoints: dataPoints
+                        status: latestPoint.status,
+                        dataPoints: dataPoints  // Keep all points for charts
                     };
-                    console.log(`  ✓ ${testName}: ${dataPoints.length} valores`);
+                    console.log(`  ✓ ${testName}: ${dataPoints.length} valores (último: ${latestPoint.value})`);
                 }
             }
         }
@@ -1364,12 +1368,16 @@ function extractPeriodValues(text, dates) {
             }
 
             if (dataPoints.length > 1) {
+                // Get the most recent value for UI compatibility
+                const latestPoint = dataPoints[dataPoints.length - 1];
                 values[testName] = {
+                    value: latestPoint.value,
                     unit: unit,
                     range: range,
-                    dataPoints: dataPoints
+                    status: latestPoint.status,
+                    dataPoints: dataPoints  // Keep all points for charts
                 };
-                console.log(`  ✓ ${testName}: ${dataPoints.length} valores (generic)`);
+                console.log(`  ✓ ${testName}: ${dataPoints.length} valores (generic, último: ${latestPoint.value})`);
             }
         }
     }
