@@ -1981,7 +1981,7 @@ function extractPeriodValues(text, dates) {
     let genericMatch;
     while ((genericMatch = genericPattern.exec(text)) !== null) {
         let testName = cleanTestName(genericMatch[1]);
-        if (/\s{2,}/.test(match[1])) continue;  
+        if (/\s{2,}/.test(genericMatch[1])) continue;  
         const range = genericMatch[2];
         const unit = genericMatch[3] || '';
         const valuesStr = genericMatch[4];
