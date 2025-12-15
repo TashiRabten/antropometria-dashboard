@@ -1331,6 +1331,11 @@ function extractUIHealthValues(text) {
         const unit = match[3];
         const refRange = match[4].trim();
 
+         if (/\s{2,}/.test(testName)) {
+        console.log(`  ⊗ Rejeitado por espaços: "${testName}"`);
+        continue;
+    }
+
         console.log(`  📌 Match ${matchCount2}:`, {
             raw: match[1],
             cleaned: testName,
@@ -1390,10 +1395,14 @@ function extractUIHealthValues(text) {
     while ((match = pattern1.exec(text)) !== null) {
         matchCount1++;
         const testName = cleanTestName(match[1]);
-        if (/\s{2,}/.test(match[1])) continue; 
         const value = parseFloat(match[2]);
         const unit = match[3];
         const refRange = match[4].trim();
+
+    if (/\s{2,}/.test(testName)) {
+        console.log(`  ⊗ Rejeitado por espaços: "${testName}"`);
+        continue;
+    }
 
         console.log(`  📌 Match ${matchCount1}:`, {
             raw: match[1],
@@ -1444,9 +1453,13 @@ function extractUIHealthValues(text) {
     while ((match = pattern3.exec(text)) !== null) {
         matchCount3++;
         const testName = cleanTestName(match[1]);
-        if (/\s{2,}/.test(match[1])) continue;
         const value = parseFloat(match[2]);
         const unit = match[3];
+
+         if (/\s{2,}/.test(testName)) {
+        console.log(`  ⊗ Rejeitado por espaços: "${testName}"`);
+        continue;
+    }
 
         if (matchCount3 <= 5) {
             console.log(`  📌 Match ${matchCount3}:`, {
