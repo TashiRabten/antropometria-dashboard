@@ -437,7 +437,7 @@ function extractMyChartSingleValues(text) {
     // For names starting with digits (like "25-OH"), use Pattern 6 above
     const rangePattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]{0,80}?)\s{2,}Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\*%\/\d]+)/gi;
 
-    let match;
+    // Reuse match variable declared earlier
     let matchCount = 0;
 
     while ((match = rangePattern.exec(text)) !== null) {
