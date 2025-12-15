@@ -1084,14 +1084,21 @@ function extractUIHealthValues(text) {
     const segments = text.split(/\s{2,}|\n/).filter(s => s.trim());
 
     // Also try regex matching directly on the full text for better results
+    // Test name should be 2-50 chars, not contain header words
     // Pattern 1: TestName: Value UNIT (High/Low) (Ref: range)
-    const pattern1 = /([A-Za-z][A-Za-z\s,.\-\/()%]+?):\s*([\d.]+)\s+([A-Z\/\*%]+)\s+\((?:High|Low)\)\s+\(Ref:\s*([^)]+)\)/gi;
+    const pattern1 = /([A-Za-z][A-Za-z\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Z\/\*%0-9]+)\s+\((?:High|Low)\)\s+\(Ref:\s*([^)]+)\)/gi;
 
     // Pattern 2: TestName: Value UNIT (Ref: range) - without High/Low
-    const pattern2 = /([A-Za-z][A-Za-z\s,.\-\/()%]+?):\s*([\d.]+)\s+([A-Z\/\*%]+)\s+\(Ref:\s*([^)]+)\)/gi;
+    const pattern2 = /([A-Za-z][A-Za-z\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Z\/\*%0-9]+)\s+\(Ref:\s*([^)]+)\)/gi;
 
     // Pattern 3: TestName: Value UNIT (no ref range)
-    const pattern3 = /([A-Za-z][A-Za-z\s,.\-\/()%]+?):\s*([\d.]+)\s+([A-Z\/\*%]+)(?:\s|$)/gi;
+    const pattern3 = /([A-Za-z][A-Za-z\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Z\/\*%0-9]+)(?:\s|$)/gi;
+
+    // Words that indicate headers, not test names
+    const headerWords = ['PATIENT', 'ORDER', 'LABORATORY', 'DEMOGRAPHICS', 'INFORMATION',
+                         'PANEL', 'COMPREHENSIVE', 'METABOLIC', 'DIFFERENTIAL', 'ENDOCRINOLOGY',
+                         'LIPID', 'PROTEIN', 'MARKERS', 'CBC', 'CLIENT', 'PROVIDER', 'ACCESSION',
+                         'AGE', 'SEX', 'DOB', 'NAME', 'MR #', 'ACCOUNT'];
 
     let match;
 
@@ -1102,7 +1109,11 @@ function extractUIHealthValues(text) {
         const unit = match[3];
         const refRange = match[4].trim();
 
-        if (testName && !isNaN(value) && !values[testName]) {
+        // Skip if test name contains header words
+        const upperName = testName.toUpperCase();
+        const isHeader = headerWords.some(hw => upperName.includes(hw));
+
+        if (testName && !isNaN(value) && !values[testName] && !isHeader) {
             // Determine status from context
             const contextStart = Math.max(0, match.index);
             const contextEnd = Math.min(text.length, match.index + match[0].length + 10);
@@ -1129,7 +1140,11 @@ function extractUIHealthValues(text) {
         const unit = match[3];
         const refRange = match[4].trim();
 
-        if (testName && !isNaN(value) && !values[testName]) {
+        // Skip if test name contains header words
+        const upperName = testName.toUpperCase();
+        const isHeader = headerWords.some(hw => upperName.includes(hw));
+
+        if (testName && !isNaN(value) && !values[testName] && !isHeader) {
             // Determine status from range
             let status = 'normal';
             const rangeMatch = refRange.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/);
@@ -1162,10 +1177,12 @@ function extractUIHealthValues(text) {
         const value = parseFloat(match[2]);
         const unit = match[3];
 
+        // Skip if test name contains header words
+        const upperName = testName.toUpperCase();
+        const isHeader = headerWords.some(hw => upperName.includes(hw));
+
         // Skip if already found or if it's a header/label
-        if (testName && !isNaN(value) && !values[testName] &&
-            !testName.includes('PATIENT') && !testName.includes('ORDER') &&
-            !testName.includes('Laboratory') && !testName.includes('Client')) {
+        if (testName && !isNaN(value) && !values[testName] && !isHeader) {
             values[testName] = {
                 value: value,
                 unit: unit,
