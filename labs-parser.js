@@ -1304,27 +1304,20 @@ function parseUIHealth(labInfo, text) {
     return labInfo;
 }
 
-// Extract values from UI Health format
+// SUBSTITUA A FUNÇÃO extractUIHealthValues NO SEU labs-parser.js
+// Esta versão corrige problemas com Ferritin, B6 e outros testes
+
 function extractUIHealthValues(text) {
     const values = {};
 
     console.log('🔍 Extraindo valores do formato UI Health...');
 
-    // Pattern: Test Name: Value UNIT (optional: High/Low) (Ref: range)
-    // Examples:
-    // "Blood Urea Nitrogen: 22 MG/DL (High) (Ref: 06-20)"
-    // "Sodium: 140 MMOL/L (Ref: 135-145)"
-    // "Ferritin: 83 NG/ML (Ref: 22 - 275)"
-    // "Cholesterol: 173 MG/DL (Ref: <200)"
-
-    // UI Health PDFs often have all text on one line separated by double spaces
-    // Split by double space or newline
-    const segments = text.split(/\s{2,}|\n/).filter(s => s.trim());
-
-    // Also try regex matching directly on the full text for better results
-    // Test name can start with letter, number, or % (like "% Immature Platelet")
-    // Test name should be 2-50 chars, not contain header words
-    // Unit pattern matches: MG/DL, NG/ML, K/UL, %, GM/DL, FL, PG, etc.
+    // Words that indicate headers, not test names
+    const headerWords = ['PATIENT', 'ORDER', 'LABORATORY', 'DEMOGRAPHICS', 'INFORMATION',
+                         'PANEL', 'COMPREHENSIVE', 'METABOLIC', 'DIFFERENTIAL', 'ENDOCRINOLOGY',
+                         'LIPID', 'PROTEIN', 'MARKERS', 'CBC', 'CLIENT', 'PROVIDER', 'ACCESSION',
+                         'AGE', 'SEX', 'DOB', 'NAME', 'MR #', 'ACCOUNT', 'PENDING', 'COLLECTED',
+                         'RECEIVED', 'REPORTED', 'ORDERING', 'TOTAL', 'STANDARD', 'RANGE', 'RESULT'];
 
     // Pattern 1: TestName: Value UNIT (High/Low) (Ref: range)
     const pattern1 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Za-z\/\*%0-9]+)\s+\((?:High|Low)\)\s+\(Ref:\s*([^)]+)\)/gi;
@@ -1335,13 +1328,6 @@ function extractUIHealthValues(text) {
     // Pattern 3: TestName: Value UNIT (no ref range)
     const pattern3 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Za-z\/\*%0-9]+)(?:\s|$)/gi;
 
-    // Words that indicate headers, not test names
-    const headerWords = ['PATIENT', 'ORDER', 'LABORATORY', 'DEMOGRAPHICS', 'INFORMATION',
-                         'PANEL', 'COMPREHENSIVE', 'METABOLIC', 'DIFFERENTIAL', 'ENDOCRINOLOGY',
-                         'LIPID', 'PROTEIN', 'MARKERS', 'CBC', 'CLIENT', 'PROVIDER', 'ACCESSION',
-                         'AGE', 'SEX', 'DOB', 'NAME', 'MR #', 'ACCOUNT', 'PENDING', 'COLLECTED',
-                         'RECEIVED', 'REPORTED', 'ORDERING', 'TOTAL', 'STANDARD', 'RANGE', 'RESULT'];
-
     let match;
 
     // Try Pattern 1 first (with High/Low flag)
@@ -1351,12 +1337,10 @@ function extractUIHealthValues(text) {
         const unit = match[3];
         const refRange = match[4].trim();
 
-        // Skip if test name contains header words
         const upperName = testName.toUpperCase();
         const isHeader = headerWords.some(hw => upperName.includes(hw));
 
         if (testName && !isNaN(value) && !values[testName] && !isHeader) {
-            // Determine status from context
             const contextStart = Math.max(0, match.index);
             const contextEnd = Math.min(text.length, match.index + match[0].length + 10);
             const context = text.substring(contextStart, contextEnd);
@@ -1371,7 +1355,7 @@ function extractUIHealthValues(text) {
                 range: refRange,
                 status: status
             };
-            console.log(`  ✓ ${testName}: ${value} ${unit} (${status}) [Ref: ${refRange}]`);
+            console.log(`  ✓ ${testName}: ${value} ${unit} (${status}) [Pattern 1]`);
         }
     }
 
@@ -1382,12 +1366,10 @@ function extractUIHealthValues(text) {
         const unit = match[3];
         const refRange = match[4].trim();
 
-        // Skip if test name contains header words
         const upperName = testName.toUpperCase();
         const isHeader = headerWords.some(hw => upperName.includes(hw));
 
         if (testName && !isNaN(value) && !values[testName] && !isHeader) {
-            // Determine status from range
             let status = 'normal';
             const rangeMatch = refRange.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/);
             if (rangeMatch) {
@@ -1409,7 +1391,7 @@ function extractUIHealthValues(text) {
                 range: refRange,
                 status: status
             };
-            console.log(`  ✓ ${testName}: ${value} ${unit} (${status}) [Ref: ${refRange}]`);
+            console.log(`  ✓ ${testName}: ${value} ${unit} (${status}) [Pattern 2]`);
         }
     }
 
@@ -1419,11 +1401,9 @@ function extractUIHealthValues(text) {
         const value = parseFloat(match[2]);
         const unit = match[3];
 
-        // Skip if test name contains header words
         const upperName = testName.toUpperCase();
         const isHeader = headerWords.some(hw => upperName.includes(hw));
 
-        // Skip if already found or if it's a header/label
         if (testName && !isNaN(value) && !values[testName] && !isHeader) {
             values[testName] = {
                 value: value,
@@ -1431,14 +1411,53 @@ function extractUIHealthValues(text) {
                 range: '',
                 status: 'normal'
             };
-            console.log(`  ✓ ${testName}: ${value} ${unit} (no ref)`);
+            console.log(`  ✓ ${testName}: ${value} ${unit} [Pattern 3]`);
+        }
+    }
+
+    // Pattern 4: Handle tests with commas in names (like "Vitamin B6, Pyridoxal 5-Phosphate")
+    const pattern4 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,70}?):\s*([\d.]+)\s+([A-Z][A-Za-z\/\*%0-9]+)(?:\s+\((?:High|Low)\))?\s*\(Ref:\s*([^)]+)\)/gi;
+    
+    while ((match = pattern4.exec(text)) !== null) {
+        const testName = cleanTestName(match[1]);
+        const value = parseFloat(match[2]);
+        const unit = match[3];
+        const refRange = match[4].trim();
+
+        const upperName = testName.toUpperCase();
+        const isHeader = headerWords.some(hw => upperName.includes(hw));
+
+        if (testName && !isNaN(value) && !values[testName] && !isHeader && testName.length > 2) {
+            let status = 'normal';
+            const contextStart = Math.max(0, match.index);
+            const contextEnd = Math.min(text.length, match.index + match[0].length + 20);
+            const context = text.substring(contextStart, contextEnd);
+
+            if (context.includes('(High)')) status = 'high';
+            else if (context.includes('(Low)')) status = 'low';
+            else {
+                const rangeMatch = refRange.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/);
+                if (rangeMatch) {
+                    const low = parseFloat(rangeMatch[1]);
+                    const high = parseFloat(rangeMatch[2]);
+                    if (value < low) status = 'low';
+                    else if (value > high) status = 'high';
+                }
+            }
+
+            values[testName] = {
+                value: value,
+                unit: unit,
+                range: refRange,
+                status: status
+            };
+            console.log(`  ✓ ${testName}: ${value} ${unit} (${status}) [Pattern 4 - comma names]`);
         }
     }
 
     console.log(`📊 Total: ${Object.keys(values).length} valores extraídos (UI Health)`);
     return values;
 }
-
 // Parse Follow My Health Format
 function parseFollowMyHealth(labInfo, text) {
     console.log('📋 Parseando formato Follow My Health...');
