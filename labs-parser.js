@@ -1321,6 +1321,7 @@ function extractUIHealthValues(text) {
     // Pattern 2: TestName: Value UNIT (Ref: range) - sem High/Low
     console.log('\n🔍 Tentando Pattern 2 (sem High/Low)...');
     const pattern2 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,70}?):\s*([\d.]+)\s+([A-Za-z][A-Za-z\/\*%0-9]+)\s+\(Ref:\s*([^)]+)\)/gi;
+    let match;
 
     let matchCount2 = 0;
     while ((match = pattern2.exec(text)) !== null) {
@@ -1385,7 +1386,6 @@ function extractUIHealthValues(text) {
     console.log('\n🔍 Tentando Pattern 1 (com High/Low)...');
     const pattern1 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,70}?):\s*([\d.]+)\s+([A-Za-z][A-Za-z\/\*%0-9]+)\s+\((?:High|Low)\)\s+\(Ref:\s*([^)]+)\)/gi;
 
-    let match;
     let matchCount1 = 0;
     while ((match = pattern1.exec(text)) !== null) {
         matchCount1++;
