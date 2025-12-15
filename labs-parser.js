@@ -1323,7 +1323,8 @@ function extractUIHealthValues(text) {
     const pattern1 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Za-z\/\*%0-9]+)\s+\((?:High|Low)\)\s+\(Ref:\s*([^)]+)\)/gi;
 
     // Pattern 2: TestName: Value UNIT (Ref: range) - without High/Low
-    const pattern2 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Za-z\/\*%0-9]+)\s+\(Ref:\s*([^)]+)\)/gi;
+    const pattern2 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,70}?):\s*([\d.]+)\s+([A-Za-z][A-Za-z\/\*%0-9]+)\s+\(Ref:\s*([^)]+)\)/gi;
+
 
     // Pattern 3: TestName: Value UNIT (no ref range)
     const pattern3 = /([A-Za-z0-9%][A-Za-z0-9\s,.\-\/()%]{1,50}?):\s*([\d.]+)\s+([A-Z][A-Za-z\/\*%0-9]+)(?:\s|$)/gi;
@@ -1382,7 +1383,7 @@ function extractUIHealthValues(text) {
                 if (!isNaN(threshold) && value >= threshold) status = 'high';
             } else if (refRange.startsWith('>')) {
                 const threshold = parseFloat(refRange.replace(/[<>]/g, ''));
-                if (!isNaN(threshold) && value <= threshold) status = 'low';
+                if (!isNaN(threshold) && value < threshold) status = 'low';
             }
 
             values[testName] = {
