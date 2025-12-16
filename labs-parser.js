@@ -550,6 +550,28 @@ function cleanTestName(name) {
     return cleaned;
 }
 
+// Validate if a test name looks legitimate (not junk)
+function isValidTestName(name) {
+    if (!name || name.length < 2) return false;
+
+    // Skip if it's just numbers
+    if (/^[\d.\s]+$/.test(name)) return false;
+
+    // Skip common junk words
+    const junkWords = ['results', 'value', 'lab', 'tests', 'blood', 'venous', 'serum',
+                       'plasma', 'specimen', 'collected', 'reported', 'ordered',
+                       'authorizing', 'provider', 'collection', 'result', 'status',
+                       'final', 'pending', 'reviewed', 'care', 'team', 'new', 'old'];
+    if (junkWords.includes(name.toLowerCase())) return false;
+
+    // Skip if starts with common non-test prefixes
+    if (/^(not yet|yet to|to be|see |per |as |if |at |on |in |by |for )/i.test(name)) return false;
+
+    // Must have at least one letter
+    if (!/[a-zA-Z]/.test(name)) return false;
+
+    return true;
+}
 
 // Extract
 // values from MyChart single-date format
@@ -557,6 +579,26 @@ function extractMyChartSingleValues(text) {
     const values = {};
 
     console.log('🔍 Iniciando extração MyChart Single...');
+
+    // Preprocess: Split two-column layouts into separate blocks
+    // If text has tabs (column separators), split each line by tabs
+    // and process columns separately
+    if (text.includes('\t')) {
+        console.log('📊 Detectado layout de duas colunas, separando...');
+        const lines = text.split('\n');
+        const col1 = [];
+        const col2 = [];
+
+        for (const line of lines) {
+            const parts = line.split('\t');
+            if (parts[0]) col1.push(parts[0].trim());
+            if (parts[1]) col2.push(parts[1].trim());
+        }
+
+        // Combine columns with newlines (process each column sequentially)
+        text = col1.join('\n') + '\n\n' + col2.join('\n');
+        console.log('📊 Texto reorganizado em colunas sequenciais');
+    }
 
     // MyChart format (text is often on one line):
     // "Sodium  Normal range: 134 - 145 mmol/L  134 134   145 145  138"
@@ -576,7 +618,8 @@ function extractMyChartSingleValues(text) {
     // Changed to greedy matching and require proper test name structure
 // Updated to handle newlines between test name and "Normal" (from improved PDF extraction)
 // Test name uses [ ] (space only) instead of \s to avoid capturing across lines
-const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2,50})[\s\n]+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/\*%\d]+)/gi;
+// Added (?:^|\n|\t) to require test name starts at line beginning or after tab
+const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2,50})[\s\n]+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/\*%\d]+)/gi;
 
     let match;
     while ((match = visualChartPattern.exec(text)) !== null) {
@@ -597,16 +640,26 @@ const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2,50})[\s\n]
             continue;
         }
 
+        // Skip if test name is junk
+        if (!isValidTestName(testName)) {
+            console.log(`  ⚠️ Skipping "${testName}" - invalid test name`);
+            continue;
+        }
+
         // Skip if already parsed
         if (values[testName]) {
             console.log(`  ⚠️ Skipping "${testName}" - already parsed`);
             continue;
         }
 
-        // Get the segment after the unit until the next "Normal" or reasonable distance
+        // Get the segment after the unit until the next "Normal", tab (column separator), or reasonable distance
         const startPos = match.index + match[0].length;
         const nextNormalPos = text.indexOf('Normal', startPos);
-        const segmentEnd = nextNormalPos > 0 && nextNormalPos - startPos < 600 ? nextNormalPos : startPos + 600;
+        const nextTabPos = text.indexOf('\t', startPos);
+        // Use the closest boundary (Normal, tab, or max distance)
+        let segmentEnd = startPos + 300; // Default max
+        if (nextNormalPos > 0 && nextNormalPos < segmentEnd) segmentEnd = nextNormalPos;
+        if (nextTabPos > 0 && nextTabPos < segmentEnd) segmentEnd = nextTabPos;
         const segment = text.substring(startPos, segmentEnd);
 
         // Extract all numbers from the segment
@@ -659,7 +712,8 @@ const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2,50})[\s\n]
     // NOTE: This pattern requires test name to start with a LETTER (not digit)
     // For names starting with digits (like "25-OH"), use Pattern 6 above
     // Test name uses [ ] (space only) instead of \s to avoid capturing across lines
-    const rangePattern = /([A-Za-z][A-Za-z0-9 \-\/\(\),]{0,80}?)[\s\n]+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\*%\/\d]+)/gi;
+    // Added (?:^|\n|\t) to require test name starts at line beginning or after tab
+    const rangePattern = /(?:^|\n|\t)([A-Za-z][A-Za-z0-9 \-\/\(\),]{0,80}?)[\s\n]+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\*%\/\d]+)/gi;
 
     // Reuse match variable declared earlier
     let matchCount = 0;
@@ -707,10 +761,15 @@ const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2,50})[\s\n]
         }
 
         // Find the value - it's the last number before the next test name or end
-        // Get the text after this match until the next "Normal" or end
+        // Get the text after this match until the next "Normal", tab, or end
         const startPos = match.index + match[0].length;
         const nextNormalPos = text.indexOf('Normal', startPos);
-        const segment = nextNormalPos > 0 ? text.substring(startPos, nextNormalPos) : text.substring(startPos, startPos + 100);
+        const nextTabPos = text.indexOf('\t', startPos);
+        // Use the closest boundary
+        let segmentEnd = startPos + 200;
+        if (nextNormalPos > 0 && nextNormalPos < segmentEnd) segmentEnd = nextNormalPos;
+        if (nextTabPos > 0 && nextTabPos < segmentEnd) segmentEnd = nextTabPos;
+        const segment = text.substring(startPos, segmentEnd);
 
         console.log(`  📝 Segment para buscar valor: "${segment.substring(0, 60)}..."`);
 
@@ -853,7 +912,8 @@ const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2,50})[\s\n]
     // Pattern 5: Test name followed by value and "High" or "Low" marker (like "990 High")
     // More flexible - allows lots of space/newlines between unit and value
     // Test name uses [ ] (space only) instead of \s to avoid capturing across lines
-    const highLowPattern = /([A-Za-z][A-Za-z \-\/0-9]+?)[\s\n]+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/\*%]+)[\s\S]{0,200}?([\d.]+)\s+(High|Low)/gi;
+    // Added (?:^|\n|\t) to require test name starts at line beginning or after tab
+    const highLowPattern = /(?:^|\n|\t)([A-Za-z][A-Za-z \-\/0-9]+?)[\s\n]+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/\*%]+)[\s\S]{0,200}?([\d.]+)\s+(High|Low)/gi;
 
     while ((match = highLowPattern.exec(text)) !== null) {
         let testName = cleanTestName(match[1]);
@@ -902,6 +962,12 @@ const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2,50})[\s\n]
         // Skip if test name has excessive whitespace (likely spanning two columns)
         if (/\s{5,}/.test(testName)) {
             console.log(`  ⚠️ Skipping "${testName}" - excessive whitespace (two-column layout)`);
+            continue;
+        }
+
+        // Skip if test name is junk
+        if (!isValidTestName(testName)) {
+            console.log(`  ⚠️ Skipping "${testName}" - invalid test name`);
             continue;
         }
 
