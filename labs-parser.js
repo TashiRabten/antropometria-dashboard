@@ -224,6 +224,7 @@ function identifyLabTypeFromFilename(filename) {
 }
 
 // Extract PDF text from ArrayBuffer data (for uploaded files)
+// Preserves line breaks by detecting y-coordinate changes in text items
 async function extractPDFTextFromData(arrayBuffer) {
     try {
         const loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
@@ -233,7 +234,32 @@ async function extractPDFTextFromData(arrayBuffer) {
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
             const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join(' ');
+
+            // Sort items by y-coordinate (top to bottom), then x-coordinate (left to right)
+            // transform[5] is y-coordinate, transform[4] is x-coordinate
+            const items = textContent.items.slice().sort((a, b) => {
+                const yDiff = b.transform[5] - a.transform[5]; // Higher y = higher on page
+                if (Math.abs(yDiff) > 5) return yDiff; // Different lines
+                return a.transform[4] - b.transform[4]; // Same line, sort by x
+            });
+
+            let pageText = '';
+            let lastY = null;
+
+            for (const item of items) {
+                const currentY = item.transform[5];
+
+                // If y-coordinate changed significantly, add newline
+                if (lastY !== null && Math.abs(currentY - lastY) > 5) {
+                    pageText += '\n';
+                } else if (pageText.length > 0 && !pageText.endsWith('\n') && !pageText.endsWith(' ')) {
+                    pageText += ' ';
+                }
+
+                pageText += item.str;
+                lastY = currentY;
+            }
+
             fullText += pageText + '\n';
         }
 
@@ -1521,7 +1547,8 @@ function extractUIHealthValues(text) {
     // Must be specific lab tests to avoid false positives
     console.log('\n🔍 Tentando Pattern 4 (sem unidade - A1C e similares)...');
     const noUnitTests = ['Hemoglobin A1c', 'A1C', 'HbA1c', 'eGFR'];
-    const pattern4 = /([A-Za-z0-9][A-Za-z0-9\s]{1,30}?):\s*([\d.]+)\s*(?:\n|$)/gi;
+    // Match "TestName: Value" at end of line or followed by whitespace
+    const pattern4 = /^([A-Za-z][A-Za-z0-9\s]{1,30}?):\s*([\d.]+)\s*$/gim;
 
     let matchCount4 = 0;
     while ((match = pattern4.exec(text)) !== null) {
