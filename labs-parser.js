@@ -431,6 +431,8 @@ function parseMyChartSingle(labInfo, text) {
         else if (title.includes('FOLATE')) labInfo.labType = 'Folato';
         else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'PCR';
         else if (title.includes('THIAMINE')) labInfo.labType = 'B1';
+        else if (title.includes('PCP VITAMIN K1')) labInfo.labType = 'PCP VITAMINA K1';
+        else if (title.includes('PCP VITAMIN E')) labInfo.labType = 'PCP VITAMINA E'; 
     } else {
         // Fallback: Extract any ALL-CAPS title before "Collected on"
         // Make it greedy to capture full title including commas and numbers
@@ -1090,13 +1092,19 @@ function parseHealow(labInfo, text) {
         else if (title.match(/HEMOGLOBIN A1C|A1C/i)) labInfo.labType = 'A1C';
         else if (title.match(/IRON/i)) labInfo.labType = 'Ferro';
         else if (title.match(/LIPID/i)) labInfo.labType = 'Painel de Lipídios';
-        else if (title.match(/VITAMIN D|25-OH VITAMIN D|VITAMIN D (25 OH)/i)) labInfo.labType = 'Vitamina D';
-        else if (title.match(/VITAMIN C/i)) labInfo.labType = 'Vitamina C';
-        else if (title.match(/VITAMIN A/i)) labInfo.labType = 'Vitamina A';
+        else if (title.includes(/VITAMIN D|25-OH VITAMIN D|VITAMIN D (25 OH)/i)) labInfo.labType = 'Vitamina D';
+        else if (title.includes(/VITAMIN C/i)) labInfo.labType = 'Vitamina C';
+        else if (title.includes(/VITAMIN A/i)) labInfo.labType = 'Vitamina A';
         else if (title.match(/\bB-?1\b/i) && !title.match(/B-?12/i)) labInfo.labType = 'B1';
         else if (title.includes('FOLATE')) labInfo.labType = 'Folato';
-        else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'PCR';
-        else if (title.includes('THIAMINE')) labInfo.labType = 'B1';
+        else if (title.includes(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'PCR';
+        else if (title.includes('THIAMINE')) labInfo.labType = 'B1';   
+        else if (title.includes('PTH')) labInfo.labType = 'Exame de PTH';
+        else if (title.includes('PCP VITAMIN K1')) labInfo.labType = 'PCP VITAMINA K1';
+        else if (title.includes('PCP VITAMIN E')) labInfo.labType = 'PCP VITAMINA E';        
+        
+        
+     
     } else {
         // Fallback: Healow titles appear before the first asterisk (*)
         // Pattern: "LIPID PANEL, EXTENDED *"
