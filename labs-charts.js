@@ -317,9 +317,25 @@ function prepareChartData(marker, timerange) {
 
     console.log(`📈 ${dataPoints.length} pontos de dados coletados para ${marker}`);
 
-    // Filter by timerange
+    // Helper to convert any date format to Date object
+    const toDate = (d) => {
+        if (!d) return null;
+        if (d instanceof Date) return d;
+        if (typeof d === 'string') return new Date(d);
+        if (typeof d === 'number') return new Date(d);
+        if (d.seconds) return new Date(d.seconds * 1000); // Firestore Timestamp
+        return null;
+    };
+
+    // Convert all dates to Date objects
+    dataPoints.forEach(dp => {
+        dp.date = toDate(dp.date);
+    });
+
+    // Filter out invalid dates and filter by timerange
     const now = new Date();
     const filteredPoints = dataPoints.filter(dp => {
+        if (!dp.date || isNaN(dp.date.getTime())) return false;
         if (timerange === 'all') return true;
         if (timerange === 'recent') return dp.date >= new Date('2023-01-01');
         if (timerange === 'baseline') return dp.date < new Date('2023-01-01');
@@ -330,7 +346,7 @@ function prepareChartData(marker, timerange) {
     filteredPoints.sort((a, b) => a.date - b.date);
 
     // Prepare chart data
-    const labels = filteredPoints.map(dp => dp.date ? dp.date.toLocaleDateString('pt-BR') : 'Data desconhecida');
+    const labels = filteredPoints.map(dp => dp.date.toLocaleDateString('pt-BR'));
     const values = filteredPoints.map(dp => dp.value);
     const statuses = filteredPoints.map(dp => dp.status);
     const colors = filteredPoints.map(dp => {
@@ -474,10 +490,22 @@ function prepareComparisonData() {
 
             if (!markerData) return;
 
+            // Helper to convert any date format to Date object
+            const toDate = (d) => {
+                if (!d) return null;
+                if (d instanceof Date) return d;
+                if (typeof d === 'string') return new Date(d);
+                if (typeof d === 'number') return new Date(d);
+                if (d.seconds) return new Date(d.seconds * 1000); // Firestore Timestamp
+                return null;
+            };
+
             if (lab.isPeriodLab) {
                 if (markerData.dataPoints) {
                     markerData.dataPoints.forEach(dp => {
-                        if (dp.date < preDietCutoff) {
+                        const dpDate = toDate(dp.date);
+                        if (!dpDate || isNaN(dpDate.getTime())) return;
+                        if (dpDate < preDietCutoff) {
                             preValues.push(dp.value);
                         } else {
                             postValues.push(dp.value);
@@ -485,8 +513,9 @@ function prepareComparisonData() {
                     });
                 }
             } else {
-                if (lab.collectionDate) {
-                    if (lab.collectionDate < preDietCutoff) {
+                const labDate = toDate(lab.collectionDate);
+                if (labDate && !isNaN(labDate.getTime())) {
+                    if (labDate < preDietCutoff) {
                         preValues.push(markerData.value);
                     } else {
                         postValues.push(markerData.value);
