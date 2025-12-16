@@ -420,16 +420,16 @@ function parseMyChartSingle(labInfo, text) {
         if (title.includes('COMPREHENSIVE METABOLIC')) labInfo.labType = 'CMP';
         else if (title.includes('CBC')) labInfo.labType = 'CBC';
         else if (title.match(/HEMOGLOBIN A1C|A1C/i)) labInfo.labType = 'A1C';
-        else if (title.match(/IRON/i)) labInfo.labType = 'Ferro';
-        else if (title.match(/LIPID/i)) labInfo.labType = 'Lipídios';
-        else if (title.match(/VITAMIN D|25-OH VITAMIN D/i)) labInfo.labType = 'Vitamina D';
-        else if (title.match(/VITAMIN C/i)) labInfo.labType = 'Vitamina C';
-        else if (title.match(/VITAMIN A/i)) labInfo.labType = 'Vitamina A';
+        else if (title.match(/IRON/i)) labInfo.labType = 'Iron';
+        else if (title.match(/LIPID/i)) labInfo.labType = 'Lipid Panel';
+        else if (title.match(/VITAMIN D|25-OH VITAMIN D/i)) labInfo.labType = 'Vitamin D';
+        else if (title.match(/VITAMIN C/i)) labInfo.labType = 'Vitamin C';
+        else if (title.match(/VITAMIN A/i)) labInfo.labType = 'Vitamin A';
         else if (title.match(/\bB-?12\b/i)) labInfo.labType = 'B12';
         else if (title.match(/\bB-?1\b/i) && !title.match(/B-?12/i)) labInfo.labType = 'B1';
-        else if (title.includes('FERRITIN')) labInfo.labType = 'Ferritina';
-        else if (title.includes('FOLATE')) labInfo.labType = 'Folato';
-        else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'PCR';
+        else if (title.includes('FERRITIN')) labInfo.labType = 'Ferritin';
+        else if (title.includes('FOLATE')) labInfo.labType = 'Folate';
+        else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'CRP';
         else if (title.includes('THIAMINE')) labInfo.labType = 'B1';
     } else {
         // Fallback: Extract any ALL-CAPS title before "Collected on"
@@ -575,7 +575,8 @@ function extractMyChartSingleValues(text) {
     // Use programmatic filtering instead of regex backreferences for more reliability
     // Changed to greedy matching and require proper test name structure
 // Updated to handle newlines between test name and "Normal" (from improved PDF extraction)
-const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9\s\-\/\(\),]{2,50})[\s\n]+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/\*%\d]+)/gi;
+// Test name uses [ ] (space only) instead of \s to avoid capturing across lines
+const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2,50})[\s\n]+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/\*%\d]+)/gi;
 
     let match;
     while ((match = visualChartPattern.exec(text)) !== null) {
@@ -657,8 +658,8 @@ const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9\s\-\/\(\),]{2,50})[\s\n
     // Limited to max 80 chars for test name to avoid capturing garbage from previous tests
     // NOTE: This pattern requires test name to start with a LETTER (not digit)
     // For names starting with digits (like "25-OH"), use Pattern 6 above
-    // Updated: Use [\s\n]+ to handle newlines between test name and "Normal"
-    const rangePattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]{0,80}?)[\s\n]+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\*%\/\d]+)/gi;
+    // Test name uses [ ] (space only) instead of \s to avoid capturing across lines
+    const rangePattern = /([A-Za-z][A-Za-z0-9 \-\/\(\),]{0,80}?)[\s\n]+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\*%\/\d]+)/gi;
 
     // Reuse match variable declared earlier
     let matchCount = 0;
@@ -801,7 +802,8 @@ const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9\s\-\/\(\),]{2,50})[\s\n
 
     // Pattern 3: "Normal range: above >X" format (like Folate with ">20.0")
     // Capture both exact values and >values
-    const abovePattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]+?)\s+Normal\s+(?:range|value):\s*above\s*>?([\d.]+)\s*([A-Za-z\/]+)[\s\S]{0,100}?Value\s+>?([\d.]+)/gi;
+    // Test name uses [ ] (space only) instead of \s to avoid capturing across lines
+    const abovePattern = /([A-Za-z][A-Za-z0-9 \-\/\(\),]+?)[\s\n]+Normal\s+(?:range|value):\s*above\s*>?([\d.]+)\s*([A-Za-z\/]+)[\s\S]{0,100}?Value[\s\n]+>?([\d.]+)/gi;
 
     while ((match = abovePattern.exec(text)) !== null) {
         let testName = cleanTestName(match[1]);
@@ -825,7 +827,8 @@ const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9\s\-\/\(\),]{2,50})[\s\n
 
     // Pattern 4: "Normal range: below <X" format (like CRP and A1C)
     // Updated to handle two-column layouts where "Value Value" appears on same line
-    const belowPattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]+?)\s+Normal range:\s*below\s*<?([\d.]+)\s*([A-Za-z\/\*%]+)[\s\S]*?Value[\s\S]*?([\d.]+)/gi;
+    // Test name uses [ ] (space only) instead of \s to avoid capturing across lines
+    const belowPattern = /([A-Za-z][A-Za-z0-9 \-\/\(\),]+?)[\s\n]+Normal range:\s*below\s*<?([\d.]+)\s*([A-Za-z\/\*%]+)[\s\S]*?Value[\s\S]*?([\d.]+)/gi;
 
     while ((match = belowPattern.exec(text)) !== null) {
         let testName = cleanTestName(match[1]);
@@ -849,7 +852,8 @@ const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9\s\-\/\(\),]{2,50})[\s\n
 
     // Pattern 5: Test name followed by value and "High" or "Low" marker (like "990 High")
     // More flexible - allows lots of space/newlines between unit and value
-    const highLowPattern = /([A-Za-z][A-Za-z\s\-\/0-9]+?)\s+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/\*%]+)[\s\S]{0,200}?([\d.]+)\s+(High|Low)/gi;
+    // Test name uses [ ] (space only) instead of \s to avoid capturing across lines
+    const highLowPattern = /([A-Za-z][A-Za-z \-\/0-9]+?)[\s\n]+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/\*%]+)[\s\S]{0,200}?([\d.]+)\s+(High|Low)/gi;
 
     while ((match = highLowPattern.exec(text)) !== null) {
         let testName = cleanTestName(match[1]);
@@ -992,13 +996,13 @@ function parseHealow(labInfo, text) {
         if (title.includes('COMPREHENSIVE') || title.includes('CMP')) labInfo.labType = 'CMP';
         else if (title.includes('BASIC METABOLIC')) labInfo.labType = 'BMP';
         else if (title.includes('BLOOD COUNT') || title.includes('CBC')) labInfo.labType = 'CBC';
-        else if (title.includes('BLOOD DIFFERENTIAL')) labInfo.labType = 'Diferencial';
-        else if (title.match(/LIPID/i)) labInfo.labType = 'Lipídios';
+        else if (title.includes('BLOOD DIFFERENTIAL')) labInfo.labType = 'Blood Differential';
+        else if (title.match(/LIPID/i)) labInfo.labType = 'Lipid Panel';
         else if (title.match(/\bB-?12\b/i)) labInfo.labType = 'B12';
         else if (title.match(/\bB-?6\b/i)) labInfo.labType = 'B6';
-        else if (title.includes('FERRITIN')) labInfo.labType = 'Ferritina';
-        else if (title.includes('FOLATE')) labInfo.labType = 'Folato';
-        else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'PCR';
+        else if (title.includes('FERRITIN')) labInfo.labType = 'Ferritin';
+        else if (title.includes('FOLATE')) labInfo.labType = 'Folate';
+        else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'CRP';
     } else {
         // Fallback: Healow titles appear before the first asterisk (*)
         // Pattern: "LIPID PANEL, EXTENDED *"
@@ -1035,7 +1039,7 @@ function parseHealow(labInfo, text) {
                 }
             }
         }
-        if (!labInfo.labType || labInfo.labType === 'Exame') {
+        if (!labInfo.labType || labInfo.labType === 'Lab Test') {
             console.log('⚠️ Nenhum título encontrado no texto');
         }
     }
@@ -1230,7 +1234,7 @@ function parseMyChartPeriod(labInfo, text) {
         const title = titleMatch[1];
         if (title.includes('CBC')) labInfo.labType = 'CBC';
         else if (title.includes('COMPREHENSIVE')) labInfo.labType = 'CMP';
-        else if (title.match(/LIPID/i)) labInfo.labType = 'Lipídios';
+        else if (title.match(/LIPID/i)) labInfo.labType = 'Lipid Panel';
         else if (title.match(/THYROID/i)) labInfo.labType = 'TSH';
         else if (title.match(/TOTAL CK/i)) labInfo.labType = 'CK Total';
         else labInfo.labType = cleanLabType(title);
@@ -1360,18 +1364,28 @@ function parseUIHealth(labInfo, text) {
 
     // Extract lab type from section header
     // Look for all-caps section headers like "COMPREHENSIVE METABOLIC PANEL", "CBC W DIFFERENTIAL", etc.
-    const sectionMatch = text.match(/\n([A-Z][A-Z\s&-]{10,60})\n(?:[A-Z][a-z])/);
-    if (sectionMatch) {
+    // Skip known non-lab headers like "PATIENT DEMOGRAPHICS", "ORDER INFORMATION"
+    const skipHeaders = ['PATIENT DEMOGRAPHICS', 'ORDER INFORMATION', 'LABORATORY'];
+    const sectionRegex = /\n([A-Z][A-Z\s&-]{10,60})\n(?:[A-Z][a-z])/g;
+    let sectionMatch;
+
+    while ((sectionMatch = sectionRegex.exec(text)) !== null) {
         const sectionName = sectionMatch[1].trim();
+
+        // Skip non-lab headers
+        if (skipHeaders.some(h => sectionName.includes(h))) {
+            continue;
+        }
 
         // Map common section names to lab types
         if (sectionName.includes('COMPREHENSIVE METABOLIC')) labInfo.labType = 'CMP';
         else if (sectionName.includes('CBC W DIFFERENTIAL') || sectionName.includes('CBC W')) labInfo.labType = 'CBC';
-        else if (sectionName.includes('LIPID')) labInfo.labType = 'Lipídios';
-        else if (sectionName.includes('ENDOCRINOLOGY')) labInfo.labType = 'Endocrinologia';
+        else if (sectionName.includes('LIPID')) labInfo.labType = 'Lipid Panel';
+        else if (sectionName.includes('ENDOCRINOLOGY')) labInfo.labType = 'Endocrinology';
         else labInfo.labType = cleanLabType(sectionName);
 
         console.log(`🏷️ Tipo de exame: ${labInfo.labType}`);
+        break; // Use first valid lab section
     }
 
     // Extract lab values
@@ -1653,12 +1667,12 @@ function parseFollowMyHealth(labInfo, text) {
     if (labTypes.length === 1) {
         const lt = labTypes[0];
         if (lt.includes('CBC')) labInfo.labType = 'CBC';
-        else if (lt.includes('LIPID')) labInfo.labType = 'Lipídios';
+        else if (lt.includes('LIPID')) labInfo.labType = 'Lipid Panel';
         else if (lt.includes('HEMOGLOBIN A1C') || lt.includes('A1C')) labInfo.labType = 'A1C';
-        else if (lt.includes('IRON')) labInfo.labType = 'Ferro';
+        else if (lt.includes('IRON')) labInfo.labType = 'Iron';
         else labInfo.labType = cleanLabType(lt);
     } else if (labTypes.length > 1) {
-        labInfo.labType = 'Painel Completo';
+        labInfo.labType = 'Complete Panel';
     }
 
     // Extract collection date from "Collected On: MM/DD/YYYY"
@@ -1803,9 +1817,9 @@ function parseMemorialHealth(labInfo, text) {
     if (sections.length === 1) {
         labInfo.labType = sections[0];
     } else if (sections.length > 1) {
-        labInfo.labType = 'Painel Completo';
+        labInfo.labType = 'Complete Panel';
     } else {
-        labInfo.labType = 'Exame';
+        labInfo.labType = 'Lab Test';
     }
     console.log(`🏷️ Tipo de exame: ${labInfo.labType}`);
 
