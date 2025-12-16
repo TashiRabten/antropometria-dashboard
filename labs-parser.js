@@ -2663,26 +2663,37 @@ function updateChartMarkerFilter() {
     const chartMarker = document.getElementById('chart-marker');
     if (!chartMarker) return;
 
-    // Collect all unique markers from all labs
-    const allMarkers = new Set();
+    // Collect all unique markers from all labs, normalizing names
+    const normalizedMarkers = new Map(); // Map<normalizedName, Set<originalNames>>
+
     allLabs.forEach(lab => {
         Object.keys(lab.values).forEach(marker => {
-            allMarkers.add(marker);
+            // Use normalizeMarkerName from labs-charts.js if available
+            const normalized = (typeof normalizeMarkerName === 'function')
+                ? normalizeMarkerName(marker)
+                : marker;
+
+            if (!normalizedMarkers.has(normalized)) {
+                normalizedMarkers.set(normalized, new Set());
+            }
+            normalizedMarkers.get(normalized).add(marker);
         });
     });
 
     // Sort markers alphabetically
-    const sortedMarkers = Array.from(allMarkers).sort();
+    const sortedMarkers = Array.from(normalizedMarkers.keys()).sort();
 
-    // Build options
+    // Build options - use normalized name as both value and label
     let options = '';
     sortedMarkers.forEach(marker => {
-        options += `<option value="${marker}">${marker}</option>`;
+        const originalNames = normalizedMarkers.get(marker);
+        const count = originalNames.size > 1 ? ` (${originalNames.size} variantes)` : '';
+        options += `<option value="${marker}">${marker}${count}</option>`;
     });
 
     if (options) {
         chartMarker.innerHTML = options;
-        console.log(`📊 Dropdown de marcadores atualizado com ${allMarkers.size} marcadores`);
+        console.log(`📊 Dropdown de marcadores atualizado com ${normalizedMarkers.size} marcadores (normalizados de ${Array.from(normalizedMarkers.values()).reduce((sum, set) => sum + set.size, 0)} originais)`);
     }
 }
 

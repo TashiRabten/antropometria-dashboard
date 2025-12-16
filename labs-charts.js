@@ -4,6 +4,102 @@ let trendChart = null;
 let comparisonChart = null;
 let listenersInitialized = false;
 
+// Marker aliases - maps different names to a canonical name
+// Format: { 'Canonical Name': ['alias1', 'alias2', ...] }
+const markerAliases = {
+    // Blood counts
+    'Hemoglobina': ['Hemoglobin', 'Hgb', 'HGB', 'Hemoglobina'],
+    'Hematócrito': ['Hematocrit', 'Hct', 'HCT', 'Hematócrito'],
+    'Leucócitos': ['WBC', 'White Blood Cells', 'White Blood Cell Count', 'Leucócitos', 'Leukocytes'],
+    'Hemácias': ['RBC', 'Red Blood Cells', 'Red Blood Cell Count', 'Hemácias', 'Eritrócitos'],
+    'Plaquetas': ['Platelets', 'Platelet Count', 'PLT', 'Plaquetas'],
+
+    // Metabolic panel
+    'Glicose': ['Glucose', 'Glicose', 'Blood Glucose', 'Fasting Glucose'],
+    'Sódio': ['Sodium', 'Na', 'Sódio'],
+    'Potássio': ['Potassium', 'K', 'Potássio'],
+    'Cloreto': ['Chloride', 'Cl', 'Cloreto'],
+    'CO2': ['CO2', 'Carbon Dioxide', 'Bicarbonate', 'HCO3'],
+    'Creatinina': ['Creatinine', 'Creatinina', 'Creat'],
+    'Ureia': ['BUN', 'Blood Urea Nitrogen', 'Ureia', 'Urea'],
+    'Cálcio': ['Calcium', 'Ca', 'Cálcio'],
+
+    // Liver
+    'AST': ['AST', 'SGOT', 'AST (SGOT)', 'Aspartate Aminotransferase'],
+    'ALT': ['ALT', 'SGPT', 'ALT (SGPT)', 'Alanine Aminotransferase'],
+    'Bilirrubina Total': ['Total Bilirubin', 'Bilirubin', 'Bilirrubina Total', 'Bilirrubina'],
+    'Fosfatase Alcalina': ['Alkaline Phosphatase', 'ALP', 'Alk Phos', 'Fosfatase Alcalina'],
+
+    // Proteins
+    'Proteína Total': ['Total Protein', 'Proteína Total', 'Protein'],
+    'Albumina': ['Albumin', 'Albumina', 'Alb'],
+    'Globulina': ['Globulin', 'Globulina'],
+
+    // Lipids
+    'Colesterol Total': ['Total Cholesterol', 'Cholesterol', 'Colesterol Total', 'Colesterol'],
+    'HDL': ['HDL', 'HDL Cholesterol', 'HDL-C'],
+    'LDL': ['LDL', 'LDL Cholesterol', 'LDL-C', 'LDL Calculated'],
+    'Triglicerídeos': ['Triglycerides', 'Triglicerídeos', 'TG', 'Trig'],
+
+    // Thyroid
+    'TSH': ['TSH', 'Thyroid Stimulating Hormone', 'TSH Ultrassensível'],
+    'T3 Livre': ['Free T3', 'T3 Free', 'T3 Livre', 'FT3'],
+    'T4 Livre': ['Free T4', 'T4 Free', 'T4 Livre', 'FT4', 'Thyroxine Free'],
+
+    // Iron
+    'Ferro': ['Iron', 'Ferro', 'Fe', 'Serum Iron'],
+    'Ferritina': ['Ferritin', 'Ferritina'],
+    'TIBC': ['TIBC', 'Total Iron Binding Capacity', 'Capacidade de Ligação'],
+
+    // Vitamins
+    'Vitamina D': ['Vitamin D', 'Vitamina D', '25-OH Vitamin D', '25-Hydroxyvitamin D', 'Vit D'],
+    'Vitamina B12': ['Vitamin B12', 'B12', 'Vitamina B12', 'Cobalamin'],
+    'Folato': ['Folate', 'Folato', 'Folic Acid'],
+    'Vitamina C': ['Vitamin C', 'Vitamina C', 'Ascorbic Acid'],
+
+    // Other
+    'A1C': ['A1C', 'Hemoglobin A1C', 'HbA1c', 'Glycated Hemoglobin', 'Hemoglobina Glicada'],
+    'PCR': ['CRP', 'C-Reactive Protein', 'PCR', 'hs-CRP'],
+    'eGFR': ['eGFR', 'Estimated GFR', 'GFR'],
+    'PTH': ['PTH', 'Parathyroid Hormone', 'PTH Intacto'],
+};
+
+// Get all aliases for a marker (including the marker itself)
+function getMarkerAliases(marker) {
+    // Check if marker is a canonical name
+    if (markerAliases[marker]) {
+        return [marker, ...markerAliases[marker]];
+    }
+
+    // Check if marker is an alias
+    for (const [canonical, aliases] of Object.entries(markerAliases)) {
+        if (aliases.includes(marker) || canonical.toLowerCase() === marker.toLowerCase()) {
+            return [canonical, ...aliases];
+        }
+    }
+
+    // No aliases found, return just the marker
+    return [marker];
+}
+
+// Normalize marker name to canonical form
+function normalizeMarkerName(marker) {
+    // Check if it's already a canonical name
+    if (markerAliases[marker]) {
+        return marker;
+    }
+
+    // Check if it's an alias
+    for (const [canonical, aliases] of Object.entries(markerAliases)) {
+        if (aliases.some(a => a.toLowerCase() === marker.toLowerCase())) {
+            return canonical;
+        }
+    }
+
+    // No match, return as-is
+    return marker;
+}
+
 // Initialize chart event listeners (only once)
 function initializeChartListeners() {
     if (listenersInitialized) return;
@@ -63,7 +159,7 @@ function initializeTrendChart() {
         data: {
             labels: data.labels,
             datasets: [{
-                label: `${marker} Levels`,
+                label: `Níveis de ${marker}`,
                 data: data.values,
                 borderColor: '#667eea',
                 backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -86,7 +182,7 @@ function initializeTrendChart() {
                 },
                 title: {
                     display: true,
-                    text: `${marker} Trend Over Time`,
+                    text: `Tendência de ${marker} ao Longo do Tempo`,
                     font: {
                         size: 16,
                         weight: 'bold'
@@ -123,7 +219,7 @@ function initializeTrendChart() {
                 x: {
                     title: {
                         display: true,
-                        text: 'Date'
+                        text: 'Data'
                     },
                     grid: {
                         display: false
@@ -140,30 +236,48 @@ function prepareChartData(marker, timerange) {
 
     const dataPoints = [];
 
-    // Collect data from all labs
+    // Get all aliases for this marker
+    const aliases = getMarkerAliases(marker);
+    console.log(`🔍 Buscando aliases: ${aliases.join(', ')}`);
+
+    // Collect data from all labs, checking all aliases
     allLabs.forEach(lab => {
+        // Find marker data using any of the aliases
+        let markerData = null;
+        let foundAlias = null;
+
+        for (const alias of aliases) {
+            if (lab.values[alias]) {
+                markerData = lab.values[alias];
+                foundAlias = alias;
+                break;
+            }
+        }
+
+        if (!markerData) return;
+
         if (lab.isPeriodLab) {
             // Period lab has multiple data points
-            const markerData = lab.values[marker];
-            if (markerData && markerData.dataPoints) {
+            if (markerData.dataPoints) {
                 markerData.dataPoints.forEach(dp => {
                     dataPoints.push({
                         date: dp.date,
                         value: dp.value,
                         status: dp.status,
-                        unit: markerData.unit
+                        unit: markerData.unit,
+                        source: foundAlias
                     });
                 });
             }
         } else {
             // Single date lab
-            const markerData = lab.values[marker];
-            if (markerData && lab.collectionDate) {
+            if (lab.collectionDate) {
                 dataPoints.push({
                     date: lab.collectionDate,
                     value: markerData.value,
                     status: markerData.status,
-                    unit: markerData.unit
+                    unit: markerData.unit,
+                    source: foundAlias
                 });
             }
         }
@@ -216,14 +330,14 @@ function initializeComparisonChart() {
             labels: comparisonData.labels,
             datasets: [
                 {
-                    label: 'Pre-Diet Average (2018-2022)',
+                    label: 'Média Pré-Dieta (2018-2022)',
                     data: comparisonData.preDiet,
                     backgroundColor: 'rgba(102, 126, 234, 0.6)',
                     borderColor: '#667eea',
                     borderWidth: 2
                 },
                 {
-                    label: 'Post-Diet Average (2023-2025)',
+                    label: 'Média Pós-Dieta (2023-2025)',
                     data: comparisonData.postDiet,
                     backgroundColor: 'rgba(76, 175, 80, 0.6)',
                     borderColor: '#4CAF50',
@@ -241,7 +355,7 @@ function initializeComparisonChart() {
                 },
                 title: {
                     display: true,
-                    text: 'Pre-Diet vs Post-Diet Comparison',
+                    text: 'Comparação Pré-Dieta vs Pós-Dieta',
                     font: {
                         size: 16,
                         weight: 'bold'
@@ -265,7 +379,7 @@ function initializeComparisonChart() {
                     beginAtZero: false,
                     title: {
                         display: true,
-                        text: 'Value'
+                        text: 'Valor'
                     },
                     grid: {
                         color: 'rgba(0, 0, 0, 0.05)'
@@ -274,7 +388,7 @@ function initializeComparisonChart() {
                 x: {
                     title: {
                         display: true,
-                        text: 'Lab Marker'
+                        text: 'Marcador'
                     },
                     grid: {
                         display: false
@@ -287,7 +401,8 @@ function initializeComparisonChart() {
 
 // Prepare before/after comparison data
 function prepareComparisonData() {
-    const markers = ['Glucose', 'Hemoglobin', 'WBC', 'Sodium', 'Potassium', 'Creatinine'];
+    // Use Portuguese canonical names
+    const markers = ['Glicose', 'Hemoglobina', 'Leucócitos', 'Sódio', 'Potássio', 'Creatinina'];
     const preDietCutoff = new Date('2023-01-01');
 
     const preDiet = [];
@@ -297,10 +412,23 @@ function prepareComparisonData() {
         const preValues = [];
         const postValues = [];
 
+        // Get all aliases for this marker
+        const aliases = getMarkerAliases(marker);
+
         allLabs.forEach(lab => {
+            // Find marker data using any alias
+            let markerData = null;
+            for (const alias of aliases) {
+                if (lab.values[alias]) {
+                    markerData = lab.values[alias];
+                    break;
+                }
+            }
+
+            if (!markerData) return;
+
             if (lab.isPeriodLab) {
-                const markerData = lab.values[marker];
-                if (markerData && markerData.dataPoints) {
+                if (markerData.dataPoints) {
                     markerData.dataPoints.forEach(dp => {
                         if (dp.date < preDietCutoff) {
                             preValues.push(dp.value);
@@ -310,8 +438,7 @@ function prepareComparisonData() {
                     });
                 }
             } else {
-                const markerData = lab.values[marker];
-                if (markerData && lab.collectionDate) {
+                if (lab.collectionDate) {
                     if (lab.collectionDate < preDietCutoff) {
                         preValues.push(markerData.value);
                     } else {
