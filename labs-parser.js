@@ -466,21 +466,21 @@ else if (/THIAMINE/i.test(title))
     labInfo.labType = 'B1';
 
 else if (/VITAMIN K1/i.test(title))
-    labInfo.labType = 'Vitamina K';
+    labInfo.labType = 'Vitamina K1';
 
 else if (/PREALBUMIN/i.test(title))
     labInfo.labType = 'Pré-albumina';
 
-else if (/T3.*FREE/i.test(title))
+else if (/\bT3\b.*\bFREE\b/i.test(title))
     labInfo.labType = 'T3 livre (triiodotironina livre)';
 
-else if (/T4.*FREE/i.test(title))
+else if (/\bT4\b.*\bFREE\b/i.test(title))
     labInfo.labType = 'T4 livre (tiroxina livre)';
 
-else if (/BASIC METABOLIC PANEL|BMP/i.test(title))
+else if (/\bBASIC\s+METABOLIC\s+PANEL\b|\bBMP\b/i.test(title))
     labInfo.labType = 'Painel Básico Metabólico';
 
-else if (/THYROID.*TSH/i.test(title))
+else if (/\bTSH\b|\bTHYROID\s+STIMULATING\s+HORMONE\b/i.test(title))
     labInfo.labType = 'TSH';
 } else {
         // Fallback: Extract any ALL-CAPS title before "Collected on"
@@ -1176,22 +1176,23 @@ else if (/THIAMINE/i.test(title))
     labInfo.labType = 'B1';
 
 else if (/VITAMIN K1/i.test(title))
-    labInfo.labType = 'Vitamina K';
+    labInfo.labType = 'Vitamina K1';
 
 else if (/PREALBUMIN/i.test(title))
     labInfo.labType = 'Pré-albumina';
 
-else if (/T3.*FREE/i.test(title))
+else if (/\bT3\b.*\bFREE\b/i.test(title))
     labInfo.labType = 'T3 livre (triiodotironina livre)';
 
-else if (/T4.*FREE/i.test(title))
+else if (/\bT4\b.*\bFREE\b/i.test(title))
     labInfo.labType = 'T4 livre (tiroxina livre)';
 
-else if (/BASIC METABOLIC PANEL|BMP/i.test(title))
+else if (/\bBASIC\s+METABOLIC\s+PANEL\b|\bBMP\b/i.test(title))
     labInfo.labType = 'Painel Básico Metabólico';
 
-else if (/THYROID.*TSH/i.test(title))
+else if (/\bTSH\b|\bTHYROID\s+STIMULATING\s+HORMONE\b/i.test(title))
     labInfo.labType = 'TSH';
+
 } else {
         // Fallback: Healow titles appear before the first asterisk (*)
         // Pattern: "LIPID PANEL, EXTENDED *"
