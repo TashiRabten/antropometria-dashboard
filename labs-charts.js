@@ -8,11 +8,15 @@ let listenersInitialized = false;
 // Format: { 'Canonical Name': ['alias1', 'alias2', ...] }
 const markerAliases = {
     // Blood counts
-    'Hemoglobina': ['Hemoglobin', 'Hgb', 'HGB', 'Hemoglobina'],
-    'Hematócrito': ['Hematocrit', 'Hct', 'HCT', 'Hematócrito'],
-    'Leucócitos': ['WBC', 'White Blood Cells', 'White Blood Cell Count', 'Leucócitos', 'Leukocytes'],
-    'Hemácias': ['RBC', 'Red Blood Cells', 'Red Blood Cell Count', 'Hemácias', 'Eritrócitos'],
-    'Plaquetas': ['Platelets', 'Platelet Count', 'PLT', 'Plaquetas'],
+    'Hemoglobina': ['Hemoglobin', 'Hgb', 'HGB', 'Hemoglobina', 'HEMOGLOBIN'],
+    'Hematócrito': ['Hematocrit', 'Hct', 'HCT', 'Hematócrito', 'HEMATOCRIT'],
+    'Leucócitos': ['WBC', 'White Blood Cells', 'White Blood Cell Count', 'Leucócitos', 'Leukocytes', 'WBCs', 'WHITE BLOOD CELLS'],
+    'Hemácias': ['RBC', 'Red Blood Cells', 'Red Blood Cell Count', 'Hemácias', 'Eritrócitos', 'RED BLOOD CELLS'],
+    'Plaquetas': ['Platelets', 'Platelet Count', 'PLT', 'Plaquetas', 'PLATELETS', 'PLATELET COUNT', 'WBCs Platelet Count'],
+    'MCV': ['MCV', 'Mean Corpuscular Volume', 'VCM'],
+    'MCH': ['MCH', 'Mean Corpuscular Hemoglobin', 'HCM'],
+    'MCHC': ['MCHC', 'Mean Corpuscular Hemoglobin Concentration', 'CHCM'],
+    'RDW': ['RDW', 'Red Cell Distribution Width', 'RDW-CV'],
 
     // Metabolic panel
     'Glicose': ['Glucose', 'Glicose', 'Blood Glucose', 'Fasting Glucose'],
@@ -36,10 +40,11 @@ const markerAliases = {
     'Globulina': ['Globulin', 'Globulina'],
 
     // Lipids
-    'Colesterol Total': ['Total Cholesterol', 'Cholesterol', 'Colesterol Total', 'Colesterol'],
-    'HDL': ['HDL', 'HDL Cholesterol', 'HDL-C'],
-    'LDL': ['LDL', 'LDL Cholesterol', 'LDL-C', 'LDL Calculated'],
-    'Triglicerídeos': ['Triglycerides', 'Triglicerídeos', 'TG', 'Trig'],
+    'Colesterol Total': ['Total Cholesterol', 'Cholesterol', 'Colesterol Total', 'Colesterol', 'CHOLESTEROL', 'TOTAL CHOLESTEROL'],
+    'HDL': ['HDL', 'HDL Cholesterol', 'HDL-C', 'HDL CHOLESTEROL'],
+    'LDL': ['LDL', 'LDL Cholesterol', 'LDL-C', 'LDL Calculated', 'LDL CHOLESTEROL', 'LDL CALCULATED'],
+    'VLDL': ['VLDL', 'VLDL Cholesterol', 'VLDL Cholesterol Calculated', 'VLDL, CALCULATED', 'VLDL-C'],
+    'Triglicerídeos': ['Triglycerides', 'Triglicerídeos', 'TG', 'Trig', 'TRIGLYCERIDES'],
 
     // Thyroid
     'TSH': ['TSH', 'Thyroid Stimulating Hormone', 'TSH Ultrassensível'],
@@ -52,10 +57,14 @@ const markerAliases = {
     'TIBC': ['TIBC', 'Total Iron Binding Capacity', 'Capacidade de Ligação'],
 
     // Vitamins
-    'Vitamina D': ['Vitamin D', 'Vitamina D', '25-OH Vitamin D', '25-Hydroxyvitamin D', 'Vit D'],
-    'Vitamina B12': ['Vitamin B12', 'B12', 'Vitamina B12', 'Cobalamin'],
-    'Folato': ['Folate', 'Folato', 'Folic Acid'],
-    'Vitamina C': ['Vitamin C', 'Vitamina C', 'Ascorbic Acid'],
+    'Vitamina D': ['Vitamin D', 'Vitamina D', '25-OH Vitamin D', '25-Hydroxyvitamin D', 'Vit D', 'Vitamin D, 25 hydroxy', 'VITAMIN D, 25 HYDROXY', '25-OH Vitamin D, Total'],
+    'Vitamina B12': ['Vitamin B12', 'B12', 'Vitamina B12', 'Cobalamin', 'VITAMIN B12', 'Vitamin B12 level'],
+    'Folato': ['Folate', 'Folato', 'Folic Acid', 'FOLATE'],
+    'Vitamina C': ['Vitamin C', 'Vitamina C', 'Ascorbic Acid', 'VITAMIN C', 'Vitamin C, Plasma', 'VITAMIN C, PLASMA'],
+    'Vitamina E (Alpha)': ['Vitamin E (Alpha-tocopherol)', 'VITAMIN E (ALPHA-TOCOPHEROL)', 'Vitamin E Alpha', 'Alpha Tocopherol'],
+    'Vitamina E (Gamma)': ['Vitamin E (Gamma Tocopherol)', 'VITAMIN E (GAMMA-TOCOPHEROL)', 'Vitamin E Gamma', 'Gamma Tocopherol'],
+    'Vitamina K1': ['Vitamin K1', 'VITAMIN K1', 'Vitamina K1', 'Phylloquinone'],
+    'Vitamina A': ['Vitamin A', 'VITAMIN A', 'Vitamina A', 'Retinol'],
 
     // Other
     'A1C': ['A1C', 'Hemoglobin A1C', 'HbA1c', 'Glycated Hemoglobin', 'Hemoglobina Glicada'],
@@ -64,39 +73,47 @@ const markerAliases = {
     'PTH': ['PTH', 'Parathyroid Hormone', 'PTH Intacto'],
 };
 
-// Get all aliases for a marker (including the marker itself)
+// Get all aliases for a marker (including the marker itself) - case insensitive
 function getMarkerAliases(marker) {
-    // Check if marker is a canonical name
-    if (markerAliases[marker]) {
-        return [marker, ...markerAliases[marker]];
-    }
+    const markerLower = marker.toLowerCase();
 
-    // Check if marker is an alias
+    // Check if marker is a canonical name (case insensitive)
     for (const [canonical, aliases] of Object.entries(markerAliases)) {
-        if (aliases.includes(marker) || canonical.toLowerCase() === marker.toLowerCase()) {
+        if (canonical.toLowerCase() === markerLower) {
             return [canonical, ...aliases];
         }
     }
 
-    // No aliases found, return just the marker
-    return [marker];
-}
-
-// Normalize marker name to canonical form
-function normalizeMarkerName(marker) {
-    // Check if it's already a canonical name
-    if (markerAliases[marker]) {
-        return marker;
+    // Check if marker is an alias (case insensitive)
+    for (const [canonical, aliases] of Object.entries(markerAliases)) {
+        if (aliases.some(a => a.toLowerCase() === markerLower)) {
+            return [canonical, ...aliases];
+        }
     }
 
-    // Check if it's an alias
+    // No aliases found, return the marker in different cases to catch variations
+    return [marker, marker.toUpperCase(), marker.toLowerCase()];
+}
+
+// Normalize marker name to canonical form - case insensitive
+function normalizeMarkerName(marker) {
+    const markerLower = marker.toLowerCase();
+
+    // Check if it's a canonical name (case insensitive)
     for (const [canonical, aliases] of Object.entries(markerAliases)) {
-        if (aliases.some(a => a.toLowerCase() === marker.toLowerCase())) {
+        if (canonical.toLowerCase() === markerLower) {
             return canonical;
         }
     }
 
-    // No match, return as-is
+    // Check if it's an alias (case insensitive)
+    for (const [canonical, aliases] of Object.entries(markerAliases)) {
+        if (aliases.some(a => a.toLowerCase() === markerLower)) {
+            return canonical;
+        }
+    }
+
+    // No match, return as-is with Title Case
     return marker;
 }
 
@@ -240,17 +257,32 @@ function prepareChartData(marker, timerange) {
     const aliases = getMarkerAliases(marker);
     console.log(`🔍 Buscando aliases: ${aliases.join(', ')}`);
 
-    // Collect data from all labs, checking all aliases
+    // Collect data from all labs, checking all aliases (case insensitive)
     allLabs.forEach(lab => {
-        // Find marker data using any of the aliases
+        // Find marker data using any of the aliases (case insensitive)
         let markerData = null;
         let foundAlias = null;
 
+        // First try exact match
         for (const alias of aliases) {
             if (lab.values[alias]) {
                 markerData = lab.values[alias];
                 foundAlias = alias;
                 break;
+            }
+        }
+
+        // If not found, try case-insensitive match
+        if (!markerData) {
+            const labValueKeys = Object.keys(lab.values);
+            for (const alias of aliases) {
+                const aliasLower = alias.toLowerCase();
+                const matchingKey = labValueKeys.find(k => k.toLowerCase() === aliasLower);
+                if (matchingKey) {
+                    markerData = lab.values[matchingKey];
+                    foundAlias = matchingKey;
+                    break;
+                }
             }
         }
 
@@ -416,12 +448,27 @@ function prepareComparisonData() {
         const aliases = getMarkerAliases(marker);
 
         allLabs.forEach(lab => {
-            // Find marker data using any alias
+            // Find marker data using any alias (case insensitive)
             let markerData = null;
+
+            // First try exact match
             for (const alias of aliases) {
                 if (lab.values[alias]) {
                     markerData = lab.values[alias];
                     break;
+                }
+            }
+
+            // If not found, try case-insensitive match
+            if (!markerData) {
+                const labValueKeys = Object.keys(lab.values);
+                for (const alias of aliases) {
+                    const aliasLower = alias.toLowerCase();
+                    const matchingKey = labValueKeys.find(k => k.toLowerCase() === aliasLower);
+                    if (matchingKey) {
+                        markerData = lab.values[matchingKey];
+                        break;
+                    }
                 }
             }
 
