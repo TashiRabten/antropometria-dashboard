@@ -19,8 +19,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Hide login screen, show main content
             showMainContent();
 
-            // Load labs for this user
-            if (typeof scanLabFiles === 'function') {
+            // IMPORTANTE: Só chamar scanLabFiles AQUI, depois de confirmar auth
+            // E só chamar UMA VEZ por sessão
+            if (typeof scanLabFiles === 'function' && !window.labsScanned) {
+                console.log('📊 Carregando labs após autenticação...');
+                window.labsScanned = true; // Flag global para evitar múltiplas chamadas
                 scanLabFiles();
             }
         } else {
@@ -50,7 +53,6 @@ async function handleLogin(event) {
 
     try {
         // Map username to email
-        // "Julia Barichello" → "julia@antropometria.com"
         const email = mapUsernameToEmail(username);
 
         console.log('🔑 Tentando login:', email);
@@ -62,6 +64,7 @@ async function handleLogin(event) {
         console.log('✅ Login bem-sucedido:', user.email);
 
         // Auth state listener will handle the rest (showMainContent + scanLabFiles)
+        // NÃO chamar scanLabFiles aqui - deixar o onAuthStateChanged fazer isso
 
     } catch (error) {
         console.error('❌ Erro no login:', error.code, error.message);
@@ -89,6 +92,9 @@ async function logout() {
     try {
         await auth.signOut();
         console.log('👋 Usuário desconectado');
+        
+        // Reset flag para permitir novo scan após login
+        window.labsScanned = false;
 
         // Auth state listener will handle showing login screen
 
@@ -153,20 +159,15 @@ function getCurrentUserEmail() {
 }
 
 // Helper function to create initial user account
-// This should only be run ONCE to create the first user
-// You can run this in the browser console after setting up Firebase:
-// createInitialUser('julia@antropometria.com', 'Turtle', 'Julia Barichello')
 async function createInitialUser(email, password, displayName) {
     try {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
 
-        // Update display name
         await user.updateProfile({
             displayName: displayName
         });
 
-        // Create user document in Firestore
         await db.collection('users').doc(user.uid).set({
             email: email,
             displayName: displayName,
@@ -174,9 +175,6 @@ async function createInitialUser(email, password, displayName) {
         });
 
         console.log('✅ Usuário criado:', email);
-        console.log('👤 User ID:', user.uid);
-        console.log('📝 Display Name:', displayName);
-
         return user;
     } catch (error) {
         console.error('❌ Erro ao criar usuário:', error);
