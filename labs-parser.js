@@ -214,7 +214,38 @@ function identifyLabTypeFromFilename(filename) {
     if (nameLower.includes('blood diff') || nameLower.includes('diff')) {
         return 'Diferencial';
     }
-
+        // Differentials (check after lipid)
+    if (nameLower.includes('PCP VITAMIN K1')) {
+        return 'PCP VITAMINA K1';
+    }
+  if (nameLower.includes('IRON PROFILE(FE & TIBC)')) {
+        return 'Ferro';
+    }
+      if (nameLower.includes('PCP VITAMIN E')) {
+        return 'PCP VITAMINA E';
+    }
+          if (nameLower.includes('PCP VITAMIN E')) {
+        return 'PCP VITAMINA E';
+    }
+              if (nameLower.includes('PCP THYROID REFLEX PANEL')) {
+        return 'Vitamina K';
+    }
+                  if (nameLower.includes('VITAMIN K')) {
+        return 'TSH';
+    } 
+                    if (nameLower.includes('PCP T3 (TRIIODOTHYRONINE), FREE')) {
+        return 'T3 livre (triiodotironina livre';
+    }
+                          if (nameLower.includes('PCP T4 (TRIIODOTHYRONINE), FREE')) {
+        return 'T4 livre (triiodotironina livre';
+    }
+                          if (nameLower.includes('BASIC METABOLIC PANEL (BMP)')) {
+        return 'Painel Básico Metabólico';
+    }
+                             if (nameLower.includes('PCP THYROID-STIMULATING HORMONE (TSH), ULTRASENSITIVE')) {
+        return 'PPCP Hormônio estimulante da tireoide (TSH), ultrassensível';
+    }
+  
     // Charts/images
     if (nameLower.includes('lab_a') || nameLower.includes('lab_')) {
         return 'Gráfico';
@@ -434,14 +465,14 @@ function parseMyChartSingle(labInfo, text) {
         else if (title.includes('PCP VITAMIN K1')) labInfo.labType = 'PCP VITAMINA K1';
         else if (title.includes('IRON PROFILE(FE & TIBC)')) labInfo.labType = 'Ferro';
         else if (title.includes('PCP VITAMIN E')) labInfo.labType = 'PCP VITAMINA E'; 
-        else if (title.includes('Vitamin K')) labInfo.labType = 'Vitamina K';
+        else if (title.includes('Vitamin K| VITAMIN K')) labInfo.labType = 'Vitamina K';
         else if (title.includes('PCP THYROID REFLEX PANEL')) labInfo.labType = 'TSH';
         else if (title.includes('PREALBUMIN')) labInfo.labType = 'PRÉ-ALBUMINA'; 
         else if (title.includes('PCP T3 (TRIIODOTHYRONINE), FREE')) labInfo.labType = 'T3 livre (triiodotironina livre)'; 
         else if (title.includes('PCP T4 (TRIIODOTHYRONINE), FREE')) labInfo.labType = 'T4 livre (triiodotironina livre)'; 
         else if (title.includes('BASIC METABOLIC PANEL (BMP)')) labInfo.labType = 'Painel Básico Metabólico';  
         else if (title.includes('PCP THYROID-STIMULATING HORMONE (TSH), ULTRASENSITIVE')) labInfo.labType = 'PCP Hormônio estimulante da tireoide (TSH), ultrassensível';
-   } else {
+    } else {
         // Fallback: Extract any ALL-CAPS title before "Collected on"
         // Make it greedy to capture full title including commas and numbers
         // Updated: [\s\n]+ to handle newlines from improved PDF extraction
@@ -1103,7 +1134,7 @@ function parseHealow(labInfo, text) {
         else if (title.includes('PCP VITAMIN K1')) labInfo.labType = 'PCP VITAMINA K1';
         else if (title.includes('IRON PROFILE(FE & TIBC)')) labInfo.labType = 'Ferro';
         else if (title.includes('PCP VITAMIN E')) labInfo.labType = 'PCP VITAMINA E'; 
-        else if (title.includes('Vitamin K')) labInfo.labType = 'Vitamina K';
+        else if (title.includes('Vitamin K| VITAMIN K')) labInfo.labType = 'Vitamina K';
         else if (title.includes('PCP THYROID REFLEX PANEL')) labInfo.labType = 'TSH';
         else if (title.includes('PREALBUMIN')) labInfo.labType = 'PRÉ-ALBUMINA'; 
         else if (title.includes('PCP T3 (TRIIODOTHYRONINE), FREE')) labInfo.labType = 'T3 livre (triiodotironina livre)'; 
