@@ -1513,9 +1513,69 @@ function extractUIHealthValues(text) {
         }
     }
 
-    pattern3.lastIndex = 0; 
-    
+    pattern3.lastIndex = 0;
+
     console.log(`Pattern 3: ${matchCount3} matches encontrados`);
+
+    // Pattern 4: TestName: Value (no unit, no ref range) - for A1C and similar
+    // Must be specific lab tests to avoid false positives
+    console.log('\n🔍 Tentando Pattern 4 (sem unidade - A1C e similares)...');
+    const noUnitTests = ['Hemoglobin A1c', 'A1C', 'HbA1c', 'eGFR'];
+    const pattern4 = /([A-Za-z0-9][A-Za-z0-9\s]{1,30}?):\s*([\d.]+)\s*(?:\n|$)/gi;
+
+    let matchCount4 = 0;
+    while ((match = pattern4.exec(text)) !== null) {
+        matchCount4++;
+        const testName = cleanTestName(match[1]);
+        const value = parseFloat(match[2]);
+
+        // Only accept specific tests that commonly have no unit
+        const isKnownNoUnitTest = noUnitTests.some(t =>
+            testName.toLowerCase().includes(t.toLowerCase()) ||
+            t.toLowerCase().includes(testName.toLowerCase())
+        );
+
+        console.log(`  📌 Match ${matchCount4}:`, {
+            raw: match[1],
+            cleaned: testName,
+            value,
+            isKnownNoUnitTest
+        });
+
+        const upperName = testName.toUpperCase();
+        const isHeader = headerWords.some(hw => upperName.includes(hw));
+
+        if (testName && !isNaN(value) && !values[testName] && !isHeader && isKnownNoUnitTest) {
+            // A1C is a percentage, default unit and reference
+            let unit = '%';
+            let range = '<5.7';
+            let status = 'normal';
+
+            if (testName.toLowerCase().includes('a1c') || testName.toLowerCase().includes('hemoglobin a')) {
+                if (value >= 6.5) status = 'high';
+                else if (value >= 5.7) status = 'borderline';
+            }
+
+            values[testName] = {
+                value: value,
+                unit: unit,
+                range: range,
+                status: status
+            };
+            console.log(`  ✅ ${testName}: ${value} ${unit} (${status}) [Pattern 4 - no unit test]`);
+        } else if (matchCount4 <= 10) {
+            console.log(`  ❌ Rejeitado:`, {
+                reason: !testName ? 'nome vazio' :
+                        isNaN(value) ? 'valor inválido' :
+                        values[testName] ? 'já existe' :
+                        isHeader ? 'é header' :
+                        !isKnownNoUnitTest ? 'não é teste sem unidade conhecido' : 'outro'
+            });
+        }
+    }
+
+    pattern4.lastIndex = 0;
+    console.log(`Pattern 4: ${matchCount4} matches encontrados`);
 
     console.log(`\n📊 Total: ${Object.keys(values).length} valores extraídos (UI Health)`);
     console.log('✅ Valores extraídos:', Object.keys(values));
