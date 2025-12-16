@@ -7,70 +7,105 @@ let listenersInitialized = false;
 // Marker aliases - maps different names to a canonical name
 // Format: { 'Canonical Name': ['alias1', 'alias2', ...] }
 const markerAliases = {
-    // Blood counts
+    // Blood counts - Basic
     'Hemoglobina': ['Hemoglobin', 'Hgb', 'HGB', 'Hemoglobina', 'HEMOGLOBIN'],
     'Hematócrito': ['Hematocrit', 'Hct', 'HCT', 'Hematócrito', 'HEMATOCRIT'],
     'Leucócitos': ['WBC', 'White Blood Cells', 'White Blood Cell Count', 'Leucócitos', 'Leukocytes', 'WBCs', 'WHITE BLOOD CELLS'],
     'Hemácias': ['RBC', 'Red Blood Cells', 'Red Blood Cell Count', 'Hemácias', 'Eritrócitos', 'RED BLOOD CELLS'],
-    'Plaquetas': ['Platelets', 'Platelet Count', 'PLT', 'Plaquetas', 'PLATELETS', 'PLATELET COUNT', 'WBCs Platelet Count'],
-    'MCV': ['MCV', 'Mean Corpuscular Volume', 'VCM'],
-    'MCH': ['MCH', 'Mean Corpuscular Hemoglobin', 'HCM'],
-    'MCHC': ['MCHC', 'Mean Corpuscular Hemoglobin Concentration', 'CHCM'],
-    'RDW': ['RDW', 'Red Cell Distribution Width', 'RDW-CV'],
+    'Plaquetas': ['Platelets', 'Platelet Count', 'PLT', 'Plaquetas', 'PLATELETS', 'PLATELET COUNT', 'PLATELET', 'Platelet', 'WBCs Platelet Count'],
+    'VCM': ['MCV', 'Mean Corpuscular Volume', 'VCM'],
+    'HCM': ['MCH', 'Mean Corpuscular Hemoglobin', 'HCM'],
+    'CHCM': ['MCHC', 'Mean Corpuscular Hemoglobin Concentration', 'CHCM'],
+    'RDW': ['RDW', 'Red Cell Distribution Width', 'RDW-CV', 'RDW-SD'],
+    'VPM': ['MPV', 'Mean Platelet Volume', 'VPM'],
+
+    // Blood counts - Differential (Relative %)
+    'Neutrófilos': ['Neutrophils', 'Neutrophils Relative', 'Neutrófilos'],
+    'Linfócitos': ['Lymphocytes', 'Lymphocytes Relative', 'Linfócitos'],
+    'Monócitos': ['Monocytes', 'Monocytes Relative', 'Monócitos'],
+    'Eosinófilos': ['Eosinophils', 'Eosinophils Relative', 'Eosinófilos'],
+    'Basófilos': ['Basophils', 'Basophils Relative', 'Basófilos'],
+
+    // Blood counts - Differential (Absolute)
+    'Neutrófilos Absolutos': ['Neutrophils Absolute', 'Absolute neutrophils', 'Abs. Neutrophil', 'ABSOLUTE NEUTROPHIL - AUTOMATED COUNT', 'Neutrófilos Absolutos'],
+    'Linfócitos Absolutos': ['Lymphocytes Absolute', 'Absolute lymphocytes', 'ABSOLUTE LYMPHOCYTE - AUTOMATED COUNT', 'Linfócitos Absolutos'],
+    'Monócitos Absolutos': ['Monocytes Absolute', 'Absolute monocytes', 'Abs. Monocyte', 'ABSOLUTE MONOCYTE - AUTOMATED COUNT', 'Monócitos Absolutos'],
+    'Eosinófilos Absolutos': ['Eosinophils Absolute', 'Absolute eosinophils', 'ABSOLUTE EOSINOPHIL - AUTOMATED COUNT', 'Eosinófilos Absolutos'],
+    'Basófilos Absolutos': ['Basophils Absolute', 'Absolute basophils', 'Abs. Basophil', 'ABSOLUTE BASOPHIL - AUTOMATED COUNT', 'Basófilos Absolutos'],
+    'Granulócitos Imaturos': ['Immature Granulocytes', 'Absolute Immature Granulocytes', 'Absolute Immature', 'Granulócitos Imaturos'],
+    'Fração Plaquetas Imaturas': ['Immature Platelet Fraction', 'Abs. Immature Platelet Fraction', 'Fração Plaquetas Imaturas'],
+    'Hemácias Nucleadas': ['Nucleated RBCS', 'Nucleated RBCs', 'Hemácias Nucleadas'],
 
     // Metabolic panel
-    'Glicose': ['Glucose', 'Glicose', 'Blood Glucose', 'Fasting Glucose'],
-    'Sódio': ['Sodium', 'Na', 'Sódio'],
-    'Potássio': ['Potassium', 'K', 'Potássio'],
-    'Cloreto': ['Chloride', 'Cl', 'Cloreto'],
-    'CO2': ['CO2', 'Carbon Dioxide', 'Bicarbonate', 'HCO3'],
-    'Creatinina': ['Creatinine', 'Creatinina', 'Creat'],
-    'Ureia': ['BUN', 'Blood Urea Nitrogen', 'Ureia', 'Urea'],
-    'Cálcio': ['Calcium', 'Ca', 'Cálcio'],
+    'Glicose': ['Glucose', 'Glicose', 'Blood Glucose', 'Fasting Glucose', 'GLUCOSE'],
+    'Sódio': ['Sodium', 'Na', 'Sódio', 'SODIUM'],
+    'Potássio': ['Potassium', 'K', 'Potássio', 'POTASSIUM'],
+    'Cloreto': ['Chloride', 'Cl', 'Cloreto', 'CHLORIDE'],
+    'CO2': ['CO2', 'Carbon Dioxide', 'Bicarbonate', 'HCO3', 'CO2 CONTENT', 'CO2 Content'],
+    'Creatinina': ['Creatinine', 'Creatinina', 'Creat', 'CREATININE'],
+    'Ureia': ['BUN', 'Blood Urea Nitrogen', 'Ureia', 'Urea', 'BLOOD UREA NITROGEN', 'Blood Urea Nitrogen (BUN)'],
+    'Cálcio': ['Calcium', 'Ca', 'Cálcio', 'CALCIUM'],
+    'Ânion Gap': ['Anion Gap', 'Anion gap', 'ANION GAP', 'Ânion Gap'],
+    'Relação BUN/Creatinina': ['BUN/Creatinine Ratio', 'BUN/Creat Ratio', 'Relação BUN/Creatinina'],
+    'eGFR': ['eGFR', 'Estimated GFR', 'GFR'],
 
     // Liver
     'AST': ['AST', 'SGOT', 'AST (SGOT)', 'Aspartate Aminotransferase'],
     'ALT': ['ALT', 'SGPT', 'ALT (SGPT)', 'Alanine Aminotransferase'],
-    'Bilirrubina Total': ['Total Bilirubin', 'Bilirubin', 'Bilirrubina Total', 'Bilirrubina'],
-    'Fosfatase Alcalina': ['Alkaline Phosphatase', 'ALP', 'Alk Phos', 'Fosfatase Alcalina'],
+    'Bilirrubina Total': ['Total Bilirubin', 'Bilirubin', 'Bilirrubina Total', 'Bilirrubina', 'BILIRUBIN, TOTAL', 'Bilirubin, Total', 'Bilirubin (total)'],
+    'Bilirrubina Direta': ['Bilirubin (direct)', 'Direct Bilirubin', 'Bilirrubina Direta'],
+    'Fosfatase Alcalina': ['Alkaline Phosphatase', 'ALP', 'Alk Phos', 'Alk phos', 'ALK PHOS', 'Fosfatase Alcalina'],
 
     // Proteins
-    'Proteína Total': ['Total Protein', 'Proteína Total', 'Protein'],
-    'Albumina': ['Albumin', 'Albumina', 'Alb'],
+    'Proteína Total': ['Total Protein', 'Proteína Total', 'Protein', 'TOTAL PROTEIN', 'Total protein'],
+    'Albumina': ['Albumin', 'Albumina', 'Alb', 'ALBUMIN', 'ALBUMI N'],
     'Globulina': ['Globulin', 'Globulina'],
+    'Relação Albumina/Globulina': ['Albumin/Globulin Ratio', 'A/G Ratio', 'Relação Albumina/Globulina'],
+    'Pré-albumina': ['Prealbumin', 'PREALBUMIN', 'Pré-albumina', 'Prealbumina'],
 
     // Lipids
     'Colesterol Total': ['Total Cholesterol', 'Cholesterol', 'Colesterol Total', 'Colesterol', 'CHOLESTEROL', 'TOTAL CHOLESTEROL'],
     'HDL': ['HDL', 'HDL Cholesterol', 'HDL-C', 'HDL CHOLESTEROL'],
-    'LDL': ['LDL', 'LDL Cholesterol', 'LDL-C', 'LDL Calculated', 'LDL CHOLESTEROL', 'LDL CALCULATED'],
-    'VLDL': ['VLDL', 'VLDL Cholesterol', 'VLDL Cholesterol Calculated', 'VLDL, CALCULATED', 'VLDL-C'],
-    'Triglicerídeos': ['Triglycerides', 'Triglicerídeos', 'TG', 'Trig', 'TRIGLYCERIDES'],
+    'LDL': ['LDL', 'LDL Cholesterol', 'LDL-C', 'LDL Calculated', 'LDL CHOLESTEROL', 'LDL CALCULATED', 'LDL, CALCULATED', 'LDL CHOLESTEROL, DIRECT', 'Calculated LDL'],
+    'VLDL': ['VLDL', 'VLDL Cholesterol', 'VLDL Cholesterol Calculated', 'VLDL, CALCULATED', 'VLDL-C', 'Calculated VLDL2'],
+    'Triglicerídeos': ['Triglycerides', 'Triglicerídeos', 'TG', 'Trig', 'TRIGLYCERIDES', 'TRIGLYCERIDE'],
+    'Colesterol não-HDL': ['Non HDL Cholesterol', 'Non-HDL Cholesterol', 'Colesterol não-HDL'],
+    'Relação Colesterol/HDL': ['Chol/HDL Ratio', 'Chol/HDL ratio', 'Cholesterol/HDL Ratio', 'Calculated LDL/HDL ratio', 'Relação Colesterol/HDL'],
 
     // Thyroid
-    'TSH': ['TSH', 'Thyroid Stimulating Hormone', 'TSH Ultrassensível'],
-    'T3 Livre': ['Free T3', 'T3 Free', 'T3 Livre', 'FT3'],
-    'T4 Livre': ['Free T4', 'T4 Free', 'T4 Livre', 'FT4', 'Thyroxine Free'],
+    'TSH': ['TSH', 'Thyroid Stimulating Hormone', 'TSH Ultrassensível', 'TSH Ultrasensitive', 'Ultra TSH'],
+    'T3 Livre': ['Free T3', 'T3 Free', 'T3 Livre', 'FT3', 'T3 (Triiodothyronine), Free'],
+    'T4 Livre': ['Free T4', 'T4 Free', 'T4 Livre', 'FT4', 'Thyroxine Free', 'T4 (Thyroxine), Free'],
 
     // Iron
-    'Ferro': ['Iron', 'Ferro', 'Fe', 'Serum Iron'],
-    'Ferritina': ['Ferritin', 'Ferritina'],
-    'TIBC': ['TIBC', 'Total Iron Binding Capacity', 'Capacidade de Ligação'],
+    'Ferro': ['Iron', 'Ferro', 'Fe', 'Serum Iron', 'IRON', 'Iron, Total'],
+    'Ferritina': ['Ferritin', 'Ferritina', 'FERRITIN'],
+    'TIBC': ['TIBC', 'Total Iron Binding Capacity', 'Capacidade de Ligação', 'TOTAL IRON BINDING CAPACITY'],
+    'Transferrina': ['Transferrin', 'TRANSFERRIN', 'Transferrina'],
+    'Saturação de Ferro': ['Iron Saturation', 'Unbound Iron Binding Capacity (IBC) Iron Saturation', 'Saturação de Ferro'],
 
     // Vitamins
-    'Vitamina D': ['Vitamin D', 'Vitamina D', '25-OH Vitamin D', '25-Hydroxyvitamin D', 'Vit D', 'Vitamin D, 25 hydroxy', 'VITAMIN D, 25 HYDROXY', '25-OH Vitamin D, Total'],
+    'Vitamina D': ['Vitamin D', 'Vitamina D', '25-OH Vitamin D', '25-Hydroxyvitamin D', 'Vit D', 'Vitamin D, 25 hydroxy', 'VITAMIN D, 25 HYDROXY', '25-OH Vitamin D, Total', 'VITAMIN D (25OH)'],
     'Vitamina B12': ['Vitamin B12', 'B12', 'Vitamina B12', 'Cobalamin', 'VITAMIN B12', 'Vitamin B12 level'],
+    'Vitamina B6': ['Vitamin B6', 'VITAMIN B6 (PYRIDOXAL 5-PHOSPHATE)', 'Pyridoxal 5-Phosphate', 'Vitamina B6'],
+    'Vitamina B1': ['Thiamin (Vitamin B1), Whole Blood', 'Thiamine', 'Vitamin B1', 'Vitamina B1', 'Tiamina'],
     'Folato': ['Folate', 'Folato', 'Folic Acid', 'FOLATE'],
     'Vitamina C': ['Vitamin C', 'Vitamina C', 'Ascorbic Acid', 'VITAMIN C', 'Vitamin C, Plasma', 'VITAMIN C, PLASMA'],
     'Vitamina E (Alpha)': ['Vitamin E (Alpha-tocopherol)', 'VITAMIN E (ALPHA-TOCOPHEROL)', 'Vitamin E Alpha', 'Alpha Tocopherol'],
     'Vitamina E (Gamma)': ['Vitamin E (Gamma Tocopherol)', 'VITAMIN E (GAMMA-TOCOPHEROL)', 'Vitamin E Gamma', 'Gamma Tocopherol'],
     'Vitamina K1': ['Vitamin K1', 'VITAMIN K1', 'Vitamina K1', 'Phylloquinone'],
-    'Vitamina A': ['Vitamin A', 'VITAMIN A', 'Vitamina A', 'Retinol'],
+    'Vitamina A': ['Vitamin A', 'VITAMIN A', 'Vitamina A', 'Retinol', 'VITAMIN A (RETINOL)'],
+
+    // Diabetes
+    'Hemoglobina A1C': ['A1C', 'Hemoglobin A1C', 'Hemoglobin A1c', 'HbA1c', 'Glycated Hemoglobin', 'Hemoglobina Glicada', 'GLYCOSYLATED HGB'],
+    'Glicose Média Estimada': ['Estimated average glucose', 'eAG', 'Glicose Média Estimada'],
+
+    // Inflammation
+    'PCR': ['CRP', 'C-Reactive Protein', 'PCR', 'hs-CRP', 'CRP (C-Reactive Protein)'],
+    'PCR Alta Sensibilidade': ['HIGH SENSITIVE CRP', 'hs-CRP', 'High Sensitivity CRP', 'PCR Alta Sensibilidade'],
 
     // Other
-    'A1C': ['A1C', 'Hemoglobin A1C', 'HbA1c', 'Glycated Hemoglobin', 'Hemoglobina Glicada'],
-    'PCR': ['CRP', 'C-Reactive Protein', 'PCR', 'hs-CRP'],
-    'eGFR': ['eGFR', 'Estimated GFR', 'GFR'],
-    'PTH': ['PTH', 'Parathyroid Hormone', 'PTH Intacto'],
+    'PTH': ['PTH', 'Parathyroid Hormone', 'PTH Intacto', 'PTH, Intact'],
 };
 
 // Get all aliases for a marker (including the marker itself) - case insensitive

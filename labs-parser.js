@@ -635,11 +635,38 @@ function cleanTestName(name) {
         cleaned = cleaned.trim();
     }
     
-    // Fix spaced compound words
+    // Fix spaced compound words (OCR errors)
     cleaned = cleaned.replace(/\bA1\s+C\b/gi, 'A1C');
     cleaned = cleaned.replace(/\bB\s+6\b/gi, 'B6');
     cleaned = cleaned.replace(/\bB\s+12\b/gi, 'B12');
-    
+    cleaned = cleaned.replace(/\bALBUMI\s+N\b/gi, 'ALBUMIN');
+    cleaned = cleaned.replace(/\bGLOBULI\s+N\b/gi, 'GLOBULIN');
+    cleaned = cleaned.replace(/\bHEMOGLOBI\s+N\b/gi, 'HEMOGLOBIN');
+    cleaned = cleaned.replace(/\bCREATINI\s+NE\b/gi, 'CREATININE');
+    cleaned = cleaned.replace(/\bBILIRUBI\s+N\b/gi, 'BILIRUBIN');
+    cleaned = cleaned.replace(/\bFERRITI\s+N\b/gi, 'FERRITIN');
+    cleaned = cleaned.replace(/\bINSULI\s+N\b/gi, 'INSULIN');
+    cleaned = cleaned.replace(/\bPROTEI\s+N\b/gi, 'PROTEIN');
+    cleaned = cleaned.replace(/\bVITAMI\s+N\b/gi, 'VITAMIN');
+    cleaned = cleaned.replace(/\bCALCIU\s+M\b/gi, 'CALCIUM');
+    cleaned = cleaned.replace(/\bSODIU\s+M\b/gi, 'SODIUM');
+    cleaned = cleaned.replace(/\bPOTASSIU\s+M\b/gi, 'POTASSIUM');
+    cleaned = cleaned.replace(/\bMAGNESIU\s+M\b/gi, 'MAGNESIUM');
+
+    // Remove "See Comment" prefixes (parsing errors)
+    cleaned = cleaned.replace(/^See\s+Comment\s+/gi, '');
+    cleaned = cleaned.replace(/^See\s+comment\s+/gi, '');
+    cleaned = cleaned.replace(/^See\s+below\s+/gi, '');
+
+    // Remove gender marker "F " or "M " at start (Healow format)
+    cleaned = cleaned.replace(/^[FM]\s{2,}/g, '');
+
+    // Remove unit prefixes that got captured (parsing errors)
+    cleaned = cleaned.replace(/^[a-z]+\/[a-z]+\s+/gi, ''); // like "fL " or "U/L "
+    cleaned = cleaned.replace(/^fL\s+/gi, '');
+    cleaned = cleaned.replace(/^U\/L\s+/gi, '');
+    cleaned = cleaned.replace(/^pg\s+/gi, '');
+
     // Remove "%" from start
     cleaned = cleaned.replace(/^%\s+/, '');
     
@@ -667,7 +694,8 @@ function isValidTestName(name) {
     const junkWords = ['results', 'value', 'lab', 'tests', 'blood', 'venous', 'serum',
                        'plasma', 'specimen', 'collected', 'reported', 'ordered',
                        'authorizing', 'provider', 'collection', 'result', 'status',
-                       'final', 'pending', 'reviewed', 'care', 'team', 'new', 'old'];
+                       'final', 'pending', 'reviewed', 'care', 'team', 'new', 'old',
+                       'name', 'reference', 'range', 'normal', 'comment'];
     if (junkWords.includes(name.toLowerCase())) return false;
 
     // Also skip names that START with junk words (like "Results Ferritin")
@@ -675,7 +703,12 @@ function isValidTestName(name) {
     if (junkWords.some(junk => nameLower.startsWith(junk + ' '))) return false;
 
     // Skip if starts with common non-test prefixes
-    if (/^(not yet|yet to|to be|see |per |as |if |at |on |in |by |for )/i.test(name)) return false;
+    if (/^(not yet|yet to|to be|see |per |as |if |at |on |in |by |for |f |wbcs )/i.test(name)) return false;
+
+    // Skip header rows and parsing errors
+    if (/name.*value.*reference/i.test(name)) return false;
+    if (/see comment/i.test(name)) return false;
+    if (/^f\s+[a-z]/i.test(name)) return false; // "F  HIGH SENSITIVE CRP" type errors
 
     // Must have at least one letter
     if (!/[a-zA-Z]/.test(name)) return false;
@@ -1328,14 +1361,17 @@ function extractHealowValues(text) {
 
     let match;
     while ((match = pattern1.exec(text)) !== null) {
-        const name = match[1].trim();
+        let name = cleanTestName(match[1]);
         const value = parseFloat(match[2]);
         const abnormal = match[3];
         const range = match[4];
         const unit = match[5];
 
-        // Skip if name is too short or looks like a header
-        if (name.length < 2 || name === 'NAME') continue;
+        // Validate the test name
+        if (!name || !isValidTestName(name)) {
+            console.log(`  ⏭️ Healow P1 skipping invalid: "${match[1]}"`);
+            continue;
+        }
 
         values[name] = {
             value: value,
@@ -1387,9 +1423,15 @@ function extractHealowValues(text) {
     const seebelowPattern = /([A-Z][A-Z\s]+?(?:CRP|PROTEIN))\s+([\d.]+)\s+See below\s*\(([^)]+)\)/gi;
     let seebelowMatch;
     while ((seebelowMatch = seebelowPattern.exec(text)) !== null) {
-        const name = seebelowMatch[1].trim();
+        let name = cleanTestName(seebelowMatch[1]);
         const value = parseFloat(seebelowMatch[2]);
         const unit = seebelowMatch[3];
+
+        // Validate the test name
+        if (!name || !isValidTestName(name)) {
+            console.log(`  ⏭️ Healow P3 skipping invalid: "${seebelowMatch[1]}"`);
+            continue;
+        }
 
         if (!values[name] && !isNaN(value)) {
             // For CRP, determine status based on common thresholds
@@ -1427,18 +1469,30 @@ for (let i = 0; i < lines.length; i++) {
     }
 
     if (inTable && line.length > 5) {
+        // Skip header-like lines
+        if (/\bNAME\b.*\bVALUE\b/i.test(line) || /\bREFERENCE\b.*\bRANGE\b/i.test(line)) {
+            console.log(`  ⏭️ Skipping header line: "${line.substring(0, 50)}..."`);
+            continue;
+        }
+
         // Try to match: TEST NAME   VALUE   RANGE (UNIT)
         const tableMatch = line.match(/^F?\s*([A-Z][A-Z\s,\-\(\)\/]+?)\s{2,}([\d.]+)\s{2,}(.+?)(?:\s*\([^)]+\))?$/i);
         if (tableMatch) {
-            const name = tableMatch[1].trim();
+            let name = cleanTestName(tableMatch[1]);
             const value = parseFloat(tableMatch[2]);
             const rangeText = tableMatch[3].trim();
+
+            // Validate the test name
+            if (!name || !isValidTestName(name)) {
+                console.log(`  ⏭️ Skipping invalid name: "${tableMatch[1]}"`);
+                continue;
+            }
 
             if (!values[name] && !isNaN(value) && name.length > 2) {
                 // Extract unit from range if present
                 const unitMatch = rangeText.match(/\(([^)]+)\)/);
                 const unit = unitMatch ? unitMatch[1] : '';
-                
+
                 // Parse range to determine status
                 let status = 'normal';
                 const rangeParts = rangeText.match(/([\d.]+)\s*-\s*([\d.]+)/);
@@ -1686,7 +1740,8 @@ function extractUIHealthValues(text) {
         const upperName = testName.toUpperCase();
         const isHeader = headerWords.some(hw => upperName.includes(hw));
 
-        if (testName && !isNaN(value) && !values[testName] && !isHeader) {
+        // Also validate using isValidTestName
+        if (testName && !isNaN(value) && !values[testName] && !isHeader && isValidTestName(testName)) {
             let status = 'normal';
             const rangeMatch = refRange.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/);
             if (rangeMatch) {
@@ -1714,10 +1769,11 @@ function extractUIHealthValues(text) {
             console.log(`  ✅ ${testName}: ${value} ${unit} (${status}) [Pattern 2]`);
         } else {
             console.log(`  ❌ Rejeitado:`, {
-                reason: !testName ? 'nome vazio' : 
-                        isNaN(value) ? 'valor inválido' : 
-                        values[testName] ? 'já existe' : 
-                        isHeader ? 'é header' : 'outro',
+                reason: !testName ? 'nome vazio' :
+                        isNaN(value) ? 'valor inválido' :
+                        values[testName] ? 'já existe' :
+                        isHeader ? 'é header' :
+                        !isValidTestName(testName) ? 'nome inválido' : 'outro',
                 testName,
                 isHeader
             });
@@ -1754,7 +1810,8 @@ function extractUIHealthValues(text) {
         const upperName = testName.toUpperCase();
         const isHeader = headerWords.some(hw => upperName.includes(hw));
 
-        if (testName && !isNaN(value) && !values[testName] && !isHeader) {
+        // Also validate using isValidTestName
+        if (testName && !isNaN(value) && !values[testName] && !isHeader && isValidTestName(testName)) {
             const contextStart = Math.max(0, match.index);
             const contextEnd = Math.min(text.length, match.index + match[0].length + 10);
             const context = text.substring(contextStart, contextEnd);
@@ -1772,15 +1829,16 @@ function extractUIHealthValues(text) {
             console.log(`  ✅ ${testName}: ${value} ${unit} (${status}) [Pattern 1]`);
         } else {
             console.log(`  ❌ Rejeitado:`, {
-                reason: !testName ? 'nome vazio' : 
-                        isNaN(value) ? 'valor inválido' : 
-                        values[testName] ? 'já existe' : 
-                        isHeader ? 'é header' : 'outro'
+                reason: !testName ? 'nome vazio' :
+                        isNaN(value) ? 'valor inválido' :
+                        values[testName] ? 'já existe' :
+                        isHeader ? 'é header' :
+                        !isValidTestName(testName) ? 'nome inválido' : 'outro'
             });
         }
     }
 
-    pattern1.lastIndex = 0;  
+    pattern1.lastIndex = 0;
 
     console.log(`Pattern 1: ${matchCount1} matches encontrados`);
 
@@ -1812,7 +1870,8 @@ function extractUIHealthValues(text) {
         const upperName = testName.toUpperCase();
         const isHeader = headerWords.some(hw => upperName.includes(hw));
 
-        if (testName && !isNaN(value) && !values[testName] && !isHeader) {
+        // Also validate using isValidTestName
+        if (testName && !isNaN(value) && !values[testName] && !isHeader && isValidTestName(testName)) {
             values[testName] = {
                 value: value,
                 unit: unit,
@@ -1822,10 +1881,11 @@ function extractUIHealthValues(text) {
             console.log(`  ✅ ${testName}: ${value} ${unit} [Pattern 3]`);
         } else if (matchCount3 <= 5) {
             console.log(`  ❌ Rejeitado:`, {
-                reason: !testName ? 'nome vazio' : 
-                        isNaN(value) ? 'valor inválido' : 
-                        values[testName] ? 'já existe' : 
-                        isHeader ? 'é header' : 'outro'
+                reason: !testName ? 'nome vazio' :
+                        isNaN(value) ? 'valor inválido' :
+                        values[testName] ? 'já existe' :
+                        isHeader ? 'é header' :
+                        !isValidTestName(testName) ? 'nome inválido' : 'outro'
             });
         }
     }
