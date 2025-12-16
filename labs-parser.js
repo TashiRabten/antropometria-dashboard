@@ -557,12 +557,16 @@ function isValidTestName(name) {
     // Skip if it's just numbers
     if (/^[\d.\s]+$/.test(name)) return false;
 
-    // Skip common junk words
+    // Skip common junk words (exact match)
     const junkWords = ['results', 'value', 'lab', 'tests', 'blood', 'venous', 'serum',
                        'plasma', 'specimen', 'collected', 'reported', 'ordered',
                        'authorizing', 'provider', 'collection', 'result', 'status',
                        'final', 'pending', 'reviewed', 'care', 'team', 'new', 'old'];
     if (junkWords.includes(name.toLowerCase())) return false;
+
+    // Also skip names that START with junk words (like "Results Ferritin")
+    const nameLower = name.toLowerCase();
+    if (junkWords.some(junk => nameLower.startsWith(junk + ' '))) return false;
 
     // Skip if starts with common non-test prefixes
     if (/^(not yet|yet to|to be|see |per |as |if |at |on |in |by |for )/i.test(name)) return false;
@@ -839,13 +843,16 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
     console.log(`🔍 Total de matches encontrados: ${matchCount}`);
 
     // Pattern 2: Test Name + Normal value/range + "Value" + NUMBER
-    const valuePattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]+?)\s+Normal (?:range|value):[^V]+Value\s+([\d.]+)/gi;
+    // Test name uses [ ] (space only) instead of \s to avoid capturing across lines
+    // Added (?:^|\n|\t) to require test name starts at line beginning or after tab
+    const valuePattern = /(?:^|\n|\t)([A-Za-z][A-Za-z0-9 \-\/\(\),]+?)[\s\n]+Normal (?:range|value):[^V]+Value[\s\n]+([\d.]+)/gi;
 
     while ((match = valuePattern.exec(text)) !== null) {
         let testName = cleanTestName(match[1]);
         const value = parseFloat(match[2]);
 
         if (!testName || testName.length < 2) continue;
+        if (!isValidTestName(testName)) continue;
         if (values[testName]) continue;
 
         if (!isNaN(value)) {
@@ -862,7 +869,8 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
     // Pattern 3: "Normal range: above >X" format (like Folate with ">20.0")
     // Capture both exact values and >values
     // Test name uses [ ] (space only) instead of \s to avoid capturing across lines
-    const abovePattern = /([A-Za-z][A-Za-z0-9 \-\/\(\),]+?)[\s\n]+Normal\s+(?:range|value):\s*above\s*>?([\d.]+)\s*([A-Za-z\/]+)[\s\S]{0,100}?Value[\s\n]+>?([\d.]+)/gi;
+    // Added (?:^|\n|\t) to require test name starts at line beginning or after tab
+    const abovePattern = /(?:^|\n|\t)([A-Za-z][A-Za-z0-9 \-\/\(\),]+?)[\s\n]+Normal\s+(?:range|value):\s*above\s*>?([\d.]+)\s*([A-Za-z\/]+)[\s\S]{0,100}?Value[\s\n]+>?([\d.]+)/gi;
 
     while ((match = abovePattern.exec(text)) !== null) {
         let testName = cleanTestName(match[1]);
@@ -871,6 +879,7 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
         const value = parseFloat(match[4]);
 
         if (!testName || testName.length < 2) continue;
+        if (!isValidTestName(testName)) continue;
         if (values[testName]) continue;
 
         if (!isNaN(value)) {
@@ -887,7 +896,8 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
     // Pattern 4: "Normal range: below <X" format (like CRP and A1C)
     // Updated to handle two-column layouts where "Value Value" appears on same line
     // Test name uses [ ] (space only) instead of \s to avoid capturing across lines
-    const belowPattern = /([A-Za-z][A-Za-z0-9 \-\/\(\),]+?)[\s\n]+Normal range:\s*below\s*<?([\d.]+)\s*([A-Za-z\/\*%]+)[\s\S]*?Value[\s\S]*?([\d.]+)/gi;
+    // Added (?:^|\n|\t) to require test name starts at line beginning or after tab
+    const belowPattern = /(?:^|\n|\t)([A-Za-z][A-Za-z0-9 \-\/\(\),]+?)[\s\n]+Normal range:\s*below\s*<?([\d.]+)\s*([A-Za-z\/\*%]+)[\s\S]*?Value[\s\S]*?([\d.]+)/gi;
 
     while ((match = belowPattern.exec(text)) !== null) {
         let testName = cleanTestName(match[1]);
@@ -896,6 +906,7 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
         const value = parseFloat(match[4]);
 
         if (!testName || testName.length < 2) continue;
+        if (!isValidTestName(testName)) continue;
         if (values[testName]) continue;
 
         if (!isNaN(value)) {
@@ -944,7 +955,9 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
     // Format: "Test Name\nNormal range: X - Y unit\n\nValue\n123"
     // Important: Test name should NOT span multiple lines (to avoid two-column layouts)
     // IMPORTANT: Test name can start with digit (e.g., "25-OH Vitamin D")
-    const splitValuePattern = /([A-Za-z0-9][A-Za-z0-9\s\-\/\(\),]{2,60}?)\s+Normal\s+(?:range|value):\s*(?:below\s*<?|above\s*>?)?\s*([\d.]+)(?:\s*-\s*([\d.]+))?\s+([A-Za-z\/]+)[\s\S]{0,50}?Value\s+([\d.]+)/gi;
+    // Test name uses [ ] (space only) instead of \s to avoid capturing across lines
+    // Added (?:^|\n|\t) to require test name starts at line beginning or after tab
+    const splitValuePattern = /(?:^|\n|\t)([A-Za-z0-9][A-Za-z0-9 \-\/\(\),]{2,60}?)[\s\n]+Normal\s+(?:range|value):\s*(?:below\s*<?|above\s*>?)?\s*([\d.]+)(?:\s*-\s*([\d.]+))?\s+([A-Za-z\/]+)[\s\S]{0,50}?Value[\s\n]+([\d.]+)/gi;
 
     while ((match = splitValuePattern.exec(text)) !== null) {
         let testName = cleanTestName(match[1]);
@@ -1004,7 +1017,9 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
 
 // Pattern 8: Simple Vitamin format - value on separate line after range
 // Format: "Vitamin X[, descriptor]\nNormal range: LOW - HIGH unit\n\nVALUE\nLOW\n\nHIGH"
-const vitaminPattern = /(Vitamin\s+[A-Za-z0-9,\s\(\)\-]+?)\s+Normal\s+range:\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)/gi;
+// Test name uses [ ] (space only) instead of \s to avoid capturing across lines
+// Added (?:^|\n|\t) to require test name starts at line beginning or after tab
+const vitaminPattern = /(?:^|\n|\t)(Vitamin [A-Za-z0-9, \(\)\-]+?)[\s\n]+Normal\s+range:\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)/gi;
 
 let vitMatch;
 while ((vitMatch = vitaminPattern.exec(text)) !== null) {
@@ -1013,7 +1028,9 @@ while ((vitMatch = vitaminPattern.exec(text)) !== null) {
     const highRange = parseFloat(vitMatch[3]);
     const unit = vitMatch[4];
 
-    if (!testName || values[testName]) continue;
+    if (!testName || testName.length < 2) continue;
+    if (!isValidTestName(testName)) continue;
+    if (values[testName]) continue;
 
     // Get segment after match
     const startPos = vitMatch.index + vitMatch[0].length;
