@@ -413,7 +413,7 @@ function parseMyChartSingle(labInfo, text) {
 
     // Extract lab type from title
     // First try specific known patterns
-    const titleMatch = text.match(/(COMPREHENSIVE METABOLIC PANEL|BLOOD COUNT|PCP VITAMIN E|PCP T3 (TRIIODOTHYRONINE), FREE|PCP IRON, TOTAL|PCP THYROID REFLEX PANEL|PCP THYROID-STIMULATING HORMONE (TSH), ULTRASENSITIVE|CBC W.*?DIFFERENTIAL|HEMOGLOBIN A1C|A1C|IRON AND TOTAL IRON BINDING|LIPID PANEL|PCP VITAMIN K1|PTH, INTACT|PCP VITAMIN E|IRON PROFILE(FE & TIBC)|25-OH VITAMIN D|VITAMIN D|VITAMIN C|VITAMIN A|VITAMIN B-?12|B-?12|FERRITIN|FOLATE|PCP VITAMINA K1|PCP VITAMINA E|C-REACTIVE PROTEIN|HIGH SENSITIVITY C-REACTIVE|HSCRP|THIAMINE|B-?1)/i);
+    const titleMatch = text.match(/(COMPREHENSIVE METABOLIC PANEL|PREALBUMIN|BASIC METABOLIC PANEL (BMP)|PREALBUMIN|BLOOD COUNT|PCP VITAMIN E|PCP T4 (TRIIODOTHYRONINE), FREE|PCP T3 (TRIIODOTHYRONINE), FREE|PCP IRON, TOTAL|PCP THYROID REFLEX PANEL|PCP THYROID-STIMULATING HORMONE (TSH), ULTRASENSITIVE|CBC W.*?DIFFERENTIAL|HEMOGLOBIN A1C|A1C|IRON AND TOTAL IRON BINDING|LIPID PANEL|PCP VITAMIN K1|PTH, INTACT|PCP VITAMIN E|IRON PROFILE(FE & TIBC)|25-OH VITAMIN D|VITAMIN D|VITAMIN C|VITAMIN A|VITAMIN B-?12|B-?12|FERRITIN|FOLATE|PCP VITAMINA K1|PCP VITAMINA E|C-REACTIVE PROTEIN|HIGH SENSITIVITY C-REACTIVE|HSCRP|THIAMINE|B-?1)/i);
     if (titleMatch) {
         console.log('🏷️ Título específico encontrado:', titleMatch[1]);
         const title = titleMatch[1];
@@ -435,10 +435,11 @@ function parseMyChartSingle(labInfo, text) {
         else if (title.includes('IRON PROFILE(FE & TIBC)')) labInfo.labType = 'Ferro';
         else if (title.includes('PCP VITAMIN E')) labInfo.labType = 'PCP VITAMINA E'; 
         else if (title.includes('Vitamin K')) labInfo.labType = 'Vitamina K';
-        else if (title.includes('Vitamin K')) labInfo.labType = 'Vitamina K';  
-        else if (title.includes('PCP THYROID REFLEX PANEL')) labInfo.labType = 'TSH'; 
-        else if (title.includes('PCP THYROID REFLEX PANEL')) labInfo.labType = 'TSH'; 
+        else if (title.includes('PCP THYROID REFLEX PANEL')) labInfo.labType = 'TSH';
+        else if (title.includes('PREALBUMIN')) labInfo.labType = 'PRÉ-ALBUMINA'; 
         else if (title.includes('PCP T3 (TRIIODOTHYRONINE), FREE')) labInfo.labType = 'T3 livre (triiodotironina livre)'; 
+        else if (title.includes('PCP T4 (TRIIODOTHYRONINE), FREE')) labInfo.labType = 'T4 livre (triiodotironina livre)'; 
+        else if (title.includes('BASIC METABOLIC PANEL (BMP)')) labInfo.labType = 'Painel Básico Metabólico';  
         else if (title.includes('PCP THYROID-STIMULATING HORMONE (TSH), ULTRASENSITIVE')) labInfo.labType = 'PCP Hormônio estimulante da tireoide (TSH), ultrassensível';
     } else {
         // Fallback: Extract any ALL-CAPS title before "Collected on"
