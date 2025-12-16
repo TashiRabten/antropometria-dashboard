@@ -417,33 +417,72 @@ function parseMyChartSingle(labInfo, text) {
     if (titleMatch) {
         console.log('🏷️ Título específico encontrado:', titleMatch[1]);
         const title = titleMatch[1];
-        if (title.includes('COMPREHENSIVE METABOLIC')) labInfo.labType = 'Painel Metabólico Completo';
-        else if (title.includes('CBC')) labInfo.labType = 'Hemograma';
-        else if (title.match(/HEMOGLOBIN A1C|A1C/i)) labInfo.labType = 'A1C';
-        else if (title.match(/IRON/i)) labInfo.labType = 'Ferro';
-        else if (title.match(/LIPID/i)) labInfo.labType = 'Painel de Lipídios';
-        else if (title.match(/VITAMIN D|25-OH VITAMIN D|VITAMIN D (25 OH)/i)) labInfo.labType = 'Vitamina D';
-        else if (title.match(/VITAMIN C/i)) labInfo.labType = 'Vitamina C';
-        else if (title.match(/VITAMIN A/i)) labInfo.labType = 'Vitamina A';
-        else if (title.match(/VITAMIN B6/i)) labInfo.labType = 'Vitamina B6';
-        else if (title.match(/VITAMIN E/i)) labInfo.labType = 'Vitamina E';
-        else if (title.match(/\bB-?12\b/i)) labInfo.labType = 'B12';
-        else if (title.match(/\bB-?1\b/i) && !title.match(/B-?12/i)) labInfo.labType = 'B1';
-        else if (title.includes('FERRITIN')) labInfo.labType = 'Ferritina';
-        else if (title.includes('FOLATE')) labInfo.labType = 'Folato';
-        else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'PCR';
-        else if (title.includes('THIAMINE')) labInfo.labType = 'B1';
-        else if (title.match(/PCP VITAMIN K1/i)) labInfo.labType = 'PCP VITAMINA K1';
-        else if (title.includes(/IRON PROFILE(FE & TIBC)/i)) labInfo.labType = 'Ferro';
-        else if (title.includes(/PCP VITAMIN E/i)) labInfo.labType = 'PCP VITAMINA E'; 
-        else if (title.includes(/Vitamin K1| VITAMIN K1/i)) labInfo.labType = 'Vitamina K';
-        else if (title.includes(/PCP THYROID REFLEX PANEL/i)) labInfo.labType = 'TSH';
-        else if (title.includes(/PREALBUMIN/i)) labInfo.labType = 'PRÉ-ALBUMINA'; 
-        else if (title.includes(/PCP T3 (TRIIODOTHYRONINE), FREE/i)) labInfo.labType = 'T3 livre (triiodotironina livre)'; 
-        else if (title.includes(/PCP T4 (TRIIODOTHYRONINE), FREE/i)) labInfo.labType = 'T4 livre (triiodotironina livre)'; 
-        else if (title.includes(/BASIC METABOLIC PANEL (BMP)/i)) labInfo.labType = 'Painel Básico Metabólico';  
-        else if (title.includes(/PCP THYROID-STIMULATING HORMONE (TSH), ULTRASENSITIVE/i)) labInfo.labType = 'PCP Hormônio estimulante da tireoide (TSH), ultrassensível';
-     } else {
+        if (title.includes('COMPREHENSIVE METABOLIC'))
+    labInfo.labType = 'Painel Metabólico Completo';
+
+else if (/\bCBC\b/i.test(title))
+    labInfo.labType = 'Hemograma';
+
+else if (/HEMOGLOBIN A1C|A1C/i.test(title))
+    labInfo.labType = 'A1C';
+
+else if (/IRON PROFILE\s*\(FE\s*&\s*TIBC\)|\bIRON\b/i.test(title))
+    labInfo.labType = 'Ferro';
+
+else if (/FERRITIN/i.test(title))
+    labInfo.labType = 'Ferritina';
+
+else if (/LIPID/i.test(title))
+    labInfo.labType = 'Painel de Lipídios';
+
+else if (/VITAMIN D|25-?OH VITAMIN D/i.test(title))
+    labInfo.labType = 'Vitamina D';
+
+else if (/VITAMIN C/i.test(title))
+    labInfo.labType = 'Vitamina C';
+
+else if (/VITAMIN A/i.test(title))
+    labInfo.labType = 'Vitamina A';
+
+else if (/VITAMIN B6/i.test(title))
+    labInfo.labType = 'Vitamina B6';
+
+else if (/VITAMIN E/i.test(title))
+    labInfo.labType = 'Vitamina E';
+
+else if (/\bB-?12\b/i.test(title))
+    labInfo.labType = 'B12';
+
+else if (/\bB-?1\b/i.test(title))
+    labInfo.labType = 'B1';
+
+else if (/FOLATE/i.test(title))
+    labInfo.labType = 'Folato';
+
+else if (/C-REACTIVE|HSCRP/i.test(title))
+    labInfo.labType = 'PCR';
+
+else if (/THIAMINE/i.test(title))
+    labInfo.labType = 'B1';
+
+else if (/VITAMIN K1/i.test(title))
+    labInfo.labType = 'Vitamina K';
+
+else if (/PREALBUMIN/i.test(title))
+    labInfo.labType = 'Pré-albumina';
+
+else if (/T3.*FREE/i.test(title))
+    labInfo.labType = 'T3 livre (triiodotironina livre)';
+
+else if (/T4.*FREE/i.test(title))
+    labInfo.labType = 'T4 livre (tiroxina livre)';
+
+else if (/BASIC METABOLIC PANEL|BMP/i.test(title))
+    labInfo.labType = 'Painel Básico Metabólico';
+
+else if (/THYROID.*TSH/i.test(title))
+    labInfo.labType = 'TSH';
+} else {
         // Fallback: Extract any ALL-CAPS title before "Collected on"
         // Make it greedy to capture full title including commas and numbers
         // Updated: [\s\n]+ to handle newlines from improved PDF extraction
@@ -1088,33 +1127,72 @@ function parseHealow(labInfo, text) {
     if (titleMatch) {
         console.log('🏷️ Título específico encontrado:', titleMatch[1]);
         const title = titleMatch[1];
-        if (title.includes('COMPREHENSIVE METABOLIC')) labInfo.labType = 'Painel Metabólico Completo';
-        else if (title.includes('CBC')) labInfo.labType = 'Hemograma';
-        else if (title.match(/HEMOGLOBIN A1C|A1C/i)) labInfo.labType = 'A1C';
-        else if (title.match(/IRON/i)) labInfo.labType = 'Ferro';
-        else if (title.match(/LIPID/i)) labInfo.labType = 'Painel de Lipídios';
-        else if (title.match(/VITAMIN D|25-OH VITAMIN D|VITAMIN D (25 OH)/i)) labInfo.labType = 'Vitamina D';
-        else if (title.match(/VITAMIN C/i)) labInfo.labType = 'Vitamina C';
-        else if (title.match(/VITAMIN A/i)) labInfo.labType = 'Vitamina A';
-        else if (title.match(/VITAMIN B6/i)) labInfo.labType = 'Vitamina B6';
-        else if (title.match(/VITAMIN E/i)) labInfo.labType = 'Vitamina E';
-        else if (title.match(/\bB-?12\b/i)) labInfo.labType = 'B12';
-        else if (title.match(/\bB-?1\b/i) && !title.match(/B-?12/i)) labInfo.labType = 'B1';
-        else if (title.includes('FERRITIN')) labInfo.labType = 'Ferritina';
-        else if (title.includes('FOLATE')) labInfo.labType = 'Folato';
-        else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'PCR';
-        else if (title.includes('THIAMINE')) labInfo.labType = 'B1';
-        else if (title.match(/PCP VITAMIN K1/i)) labInfo.labType = 'PCP VITAMINA K1';
-        else if (title.includes(/IRON PROFILE(FE & TIBC)/i)) labInfo.labType = 'Ferro';
-        else if (title.includes(/PCP VITAMIN E/i)) labInfo.labType = 'PCP VITAMINA E'; 
-        else if (title.includes(/Vitamin K1| VITAMIN K1/i)) labInfo.labType = 'Vitamina K';
-        else if (title.includes(/PCP THYROID REFLEX PANEL/i)) labInfo.labType = 'TSH';
-        else if (title.includes(/PREALBUMIN/i)) labInfo.labType = 'PRÉ-ALBUMINA'; 
-        else if (title.includes(/PCP T3 (TRIIODOTHYRONINE), FREE/i)) labInfo.labType = 'T3 livre (triiodotironina livre)'; 
-        else if (title.includes(/PCP T4 (TRIIODOTHYRONINE), FREE/i)) labInfo.labType = 'T4 livre (triiodotironina livre)'; 
-        else if (title.includes(/BASIC METABOLIC PANEL (BMP)/i)) labInfo.labType = 'Painel Básico Metabólico';  
-        else if (title.includes(/PCP THYROID-STIMULATING HORMONE (TSH), ULTRASENSITIVE/i)) labInfo.labType = 'PCP Hormônio estimulante da tireoide (TSH), ultrassensível';
-    } else {
+if (title.includes('COMPREHENSIVE METABOLIC'))
+    labInfo.labType = 'Painel Metabólico Completo';
+
+else if (/\bCBC\b/i.test(title))
+    labInfo.labType = 'Hemograma';
+
+else if (/HEMOGLOBIN A1C|A1C/i.test(title))
+    labInfo.labType = 'A1C';
+
+else if (/IRON PROFILE\s*\(FE\s*&\s*TIBC\)|\bIRON\b/i.test(title))
+    labInfo.labType = 'Ferro';
+
+else if (/FERRITIN/i.test(title))
+    labInfo.labType = 'Ferritina';
+
+else if (/LIPID/i.test(title))
+    labInfo.labType = 'Painel de Lipídios';
+
+else if (/VITAMIN D|25-?OH VITAMIN D/i.test(title))
+    labInfo.labType = 'Vitamina D';
+
+else if (/VITAMIN C/i.test(title))
+    labInfo.labType = 'Vitamina C';
+
+else if (/VITAMIN A/i.test(title))
+    labInfo.labType = 'Vitamina A';
+
+else if (/VITAMIN B6/i.test(title))
+    labInfo.labType = 'Vitamina B6';
+
+else if (/VITAMIN E/i.test(title))
+    labInfo.labType = 'Vitamina E';
+
+else if (/\bB-?12\b/i.test(title))
+    labInfo.labType = 'B12';
+
+else if (/\bB-?1\b/i.test(title))
+    labInfo.labType = 'B1';
+
+else if (/FOLATE/i.test(title))
+    labInfo.labType = 'Folato';
+
+else if (/C-REACTIVE|HSCRP/i.test(title))
+    labInfo.labType = 'PCR';
+
+else if (/THIAMINE/i.test(title))
+    labInfo.labType = 'B1';
+
+else if (/VITAMIN K1/i.test(title))
+    labInfo.labType = 'Vitamina K';
+
+else if (/PREALBUMIN/i.test(title))
+    labInfo.labType = 'Pré-albumina';
+
+else if (/T3.*FREE/i.test(title))
+    labInfo.labType = 'T3 livre (triiodotironina livre)';
+
+else if (/T4.*FREE/i.test(title))
+    labInfo.labType = 'T4 livre (tiroxina livre)';
+
+else if (/BASIC METABOLIC PANEL|BMP/i.test(title))
+    labInfo.labType = 'Painel Básico Metabólico';
+
+else if (/THYROID.*TSH/i.test(title))
+    labInfo.labType = 'TSH';
+} else {
         // Fallback: Healow titles appear before the first asterisk (*)
         // Pattern: "LIPID PANEL, EXTENDED *"
         const asteriskMatch = text.match(/([A-Z][A-Z\s\d\-\/\(\),&]{4,60}?)\s*\*/);
