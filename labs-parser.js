@@ -422,7 +422,7 @@ function parseMyChartSingle(labInfo, text) {
         else if (title.match(/HEMOGLOBIN A1C|A1C/i)) labInfo.labType = 'A1C';
         else if (title.match(/IRON/i)) labInfo.labType = 'Ferro';
         else if (title.match(/LIPID/i)) labInfo.labType = 'Painel de Lipídios';
-        else if (title.match(/VITAMIN D|25-OH VITAMIN D/i)) labInfo.labType = 'Vitamina D';
+        else if (title.match(/VITAMIN D|25-OH VITAMIN D|VITAMIN D (25 OH)/i)) labInfo.labType = 'Vitamina D';
         else if (title.match(/VITAMIN C/i)) labInfo.labType = 'Vitamina C';
         else if (title.match(/VITAMIN A/i)) labInfo.labType = 'Vitamina A';
         else if (title.match(/\bB-?12\b/i)) labInfo.labType = 'B12';
@@ -1086,6 +1086,23 @@ function parseHealow(labInfo, text) {
         else if (title.includes('FERRITIN')) labInfo.labType = 'Ferritina';
         else if (title.includes('FOLATE')) labInfo.labType = 'Folato';
         else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'PCR';
+        else if (title.includes('CBC')) labInfo.labType = 'Hemograma';
+        else if (title.match(/HEMOGLOBIN A1C|A1C/i)) labInfo.labType = 'A1C';
+        else if (title.match(/IRON/i)) labInfo.labType = 'Ferro';
+        else if (title.match(/LIPID/i)) labInfo.labType = 'Painel de Lipídios';
+        else if (title.match(/VITAMIN D|25-OH VITAMIN D|VITAMIN D (25 OH)/i)) labInfo.labType = 'Vitamina D';
+        else if (title.match(/VITAMIN C/i)) labInfo.labType = 'Vitamina C';
+        else if (title.match(/VITAMIN A/i)) labInfo.labType = 'Vitamina A';
+        else if (title.match(/\bB-?1\b/i) && !title.match(/B-?12/i)) labInfo.labType = 'B1';
+        else if (title.includes('FOLATE')) labInfo.labType = 'Folato';
+        else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'PCR';
+        else if (title.includes('THIAMINE')) labInfo.labType = 'B1';
+    } else {
+
+
+
+
+
     } else {
         // Fallback: Healow titles appear before the first asterisk (*)
         // Pattern: "LIPID PANEL, EXTENDED *"
