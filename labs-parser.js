@@ -417,19 +417,19 @@ function parseMyChartSingle(labInfo, text) {
     if (titleMatch) {
         console.log('🏷️ Título específico encontrado:', titleMatch[1]);
         const title = titleMatch[1];
-        if (title.includes('COMPREHENSIVE METABOLIC')) labInfo.labType = 'CMP';
-        else if (title.includes('CBC')) labInfo.labType = 'CBC';
+        if (title.includes('COMPREHENSIVE METABOLIC')) labInfo.labType = 'Painel Metabólico Completo';
+        else if (title.includes('CBC')) labInfo.labType = 'Hemograma';
         else if (title.match(/HEMOGLOBIN A1C|A1C/i)) labInfo.labType = 'A1C';
-        else if (title.match(/IRON/i)) labInfo.labType = 'Iron';
-        else if (title.match(/LIPID/i)) labInfo.labType = 'Lipid Panel';
-        else if (title.match(/VITAMIN D|25-OH VITAMIN D/i)) labInfo.labType = 'Vitamin D';
-        else if (title.match(/VITAMIN C/i)) labInfo.labType = 'Vitamin C';
-        else if (title.match(/VITAMIN A/i)) labInfo.labType = 'Vitamin A';
+        else if (title.match(/IRON/i)) labInfo.labType = 'Ferro';
+        else if (title.match(/LIPID/i)) labInfo.labType = 'Painel de Lipídios';
+        else if (title.match(/VITAMIN D|25-OH VITAMIN D/i)) labInfo.labType = 'Vitamina D';
+        else if (title.match(/VITAMIN C/i)) labInfo.labType = 'Vitamina C';
+        else if (title.match(/VITAMIN A/i)) labInfo.labType = 'Vitamina A';
         else if (title.match(/\bB-?12\b/i)) labInfo.labType = 'B12';
         else if (title.match(/\bB-?1\b/i) && !title.match(/B-?12/i)) labInfo.labType = 'B1';
-        else if (title.includes('FERRITIN')) labInfo.labType = 'Ferritin';
-        else if (title.includes('FOLATE')) labInfo.labType = 'Folate';
-        else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'CRP';
+        else if (title.includes('FERRITIN')) labInfo.labType = 'Ferritina';
+        else if (title.includes('FOLATE')) labInfo.labType = 'Folato';
+        else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'PCR';
         else if (title.includes('THIAMINE')) labInfo.labType = 'B1';
     } else {
         // Fallback: Extract any ALL-CAPS title before "Collected on"
@@ -1076,16 +1076,16 @@ function parseHealow(labInfo, text) {
     if (titleMatch) {
         console.log('🏷️ Título específico encontrado:', titleMatch[1]);
         const title = titleMatch[1];
-        if (title.includes('COMPREHENSIVE') || title.includes('CMP')) labInfo.labType = 'CMP';
-        else if (title.includes('BASIC METABOLIC')) labInfo.labType = 'BMP';
-        else if (title.includes('BLOOD COUNT') || title.includes('CBC')) labInfo.labType = 'CBC';
-        else if (title.includes('BLOOD DIFFERENTIAL')) labInfo.labType = 'Blood Differential';
-        else if (title.match(/LIPID/i)) labInfo.labType = 'Lipid Panel';
+        if (title.includes('COMPREHENSIVE') || title.includes('CMP')) labInfo.labType = 'Painel Metabólico Completo';
+        else if (title.includes('BASIC METABOLIC')) labInfo.labType = 'Painel Metabólico Básico';
+        else if (title.includes('BLOOD COUNT') || title.includes('CBC')) labInfo.labType = 'Hemograma';
+        else if (title.includes('BLOOD DIFFERENTIAL')) labInfo.labType = 'Diferencial de Sangue';
+        else if (title.match(/LIPID/i)) labInfo.labType = 'Painel de Lipídios';
         else if (title.match(/\bB-?12\b/i)) labInfo.labType = 'B12';
         else if (title.match(/\bB-?6\b/i)) labInfo.labType = 'B6';
-        else if (title.includes('FERRITIN')) labInfo.labType = 'Ferritin';
-        else if (title.includes('FOLATE')) labInfo.labType = 'Folate';
-        else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'CRP';
+        else if (title.includes('FERRITIN')) labInfo.labType = 'Ferritina';
+        else if (title.includes('FOLATE')) labInfo.labType = 'Folato';
+        else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'PCR';
     } else {
         // Fallback: Healow titles appear before the first asterisk (*)
         // Pattern: "LIPID PANEL, EXTENDED *"
@@ -1315,9 +1315,9 @@ function parseMyChartPeriod(labInfo, text) {
     const titleMatch = text.match(/(CBC W.*?DIFFERENTIAL|COMPREHENSIVE METABOLIC PANEL|LIPID PANEL|THYROID[- ]STIMULATING HORMONE[^-\n]*|TOTAL CK)\s*-?\s*Past Results/i);
     if (titleMatch) {
         const title = titleMatch[1];
-        if (title.includes('CBC')) labInfo.labType = 'CBC';
-        else if (title.includes('COMPREHENSIVE')) labInfo.labType = 'CMP';
-        else if (title.match(/LIPID/i)) labInfo.labType = 'Lipid Panel';
+        if (title.includes('CBC')) labInfo.labType = 'Hemograma';
+        else if (title.includes('COMPREHENSIVE')) labInfo.labType = 'Painel Metabólico Completo';
+        else if (title.match(/LIPID/i)) labInfo.labType = 'Painel de Lipídios';
         else if (title.match(/THYROID/i)) labInfo.labType = 'TSH';
         else if (title.match(/TOTAL CK/i)) labInfo.labType = 'CK Total';
         else labInfo.labType = cleanLabType(title);
@@ -1461,10 +1461,10 @@ function parseUIHealth(labInfo, text) {
         }
 
         // Map common section names to lab types
-        if (sectionName.includes('COMPREHENSIVE METABOLIC')) labInfo.labType = 'CMP';
-        else if (sectionName.includes('CBC W DIFFERENTIAL') || sectionName.includes('CBC W')) labInfo.labType = 'CBC';
-        else if (sectionName.includes('LIPID')) labInfo.labType = 'Lipid Panel';
-        else if (sectionName.includes('ENDOCRINOLOGY')) labInfo.labType = 'Endocrinology';
+        if (sectionName.includes('COMPREHENSIVE METABOLIC')) labInfo.labType = 'Painel Metabólico Completo';
+        else if (sectionName.includes('CBC W DIFFERENTIAL') || sectionName.includes('CBC W')) labInfo.labType = 'Hemograma';
+        else if (sectionName.includes('LIPID')) labInfo.labType = 'Painel de Lipídios';
+        else if (sectionName.includes('ENDOCRINOLOGY')) labInfo.labType = 'Endocrinologia';
         else labInfo.labType = cleanLabType(sectionName);
 
         console.log(`🏷️ Tipo de exame: ${labInfo.labType}`);
