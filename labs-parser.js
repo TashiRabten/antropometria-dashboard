@@ -1098,12 +1098,6 @@ function parseHealow(labInfo, text) {
         else if (title.match(/C-REACTIVE|HSCRP/i)) labInfo.labType = 'PCR';
         else if (title.includes('THIAMINE')) labInfo.labType = 'B1';
     } else {
-
-
-
-
-
-    } else {
         // Fallback: Healow titles appear before the first asterisk (*)
         // Pattern: "LIPID PANEL, EXTENDED *"
         const asteriskMatch = text.match(/([A-Z][A-Z\s\d\-\/\(\),&]{4,60}?)\s*\*/);
