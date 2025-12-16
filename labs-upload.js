@@ -292,19 +292,37 @@ async function extractPDFTextFromArrayBuffer(arrayBuffer) {
 
             let pageText = '';
             let lastY = null;
+            let lastX = null;
+            let lastWidth = 0;
 
             for (const item of items) {
                 const currentY = item.transform[5];
+                const currentX = item.transform[4];
+                const itemWidth = item.width || 0;
 
                 // If y-coordinate changed significantly, add newline
                 if (lastY !== null && Math.abs(currentY - lastY) > 5) {
                     pageText += '\n';
-                } else if (pageText.length > 0 && !pageText.endsWith('\n') && !pageText.endsWith(' ')) {
-                    pageText += ' ';
+                    lastX = null; // Reset X tracking for new line
+                } else if (pageText.length > 0 && !pageText.endsWith('\n')) {
+                    // Same line - check for large X gap (column separator)
+                    if (lastX !== null) {
+                        const gap = currentX - (lastX + lastWidth);
+                        if (gap > 50) {
+                            // Large gap indicates column separator - add tab or multiple spaces
+                            pageText += '\t';
+                        } else if (!pageText.endsWith(' ') && !pageText.endsWith('\t')) {
+                            pageText += ' ';
+                        }
+                    } else if (!pageText.endsWith(' ')) {
+                        pageText += ' ';
+                    }
                 }
 
                 pageText += item.str;
                 lastY = currentY;
+                lastX = currentX;
+                lastWidth = itemWidth;
             }
 
             fullText += pageText + '\n';

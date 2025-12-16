@@ -245,19 +245,37 @@ async function extractPDFTextFromData(arrayBuffer) {
 
             let pageText = '';
             let lastY = null;
+            let lastX = null;
+            let lastWidth = 0;
 
             for (const item of items) {
                 const currentY = item.transform[5];
+                const currentX = item.transform[4];
+                const itemWidth = item.width || 0;
 
                 // If y-coordinate changed significantly, add newline
                 if (lastY !== null && Math.abs(currentY - lastY) > 5) {
                     pageText += '\n';
-                } else if (pageText.length > 0 && !pageText.endsWith('\n') && !pageText.endsWith(' ')) {
-                    pageText += ' ';
+                    lastX = null; // Reset X tracking for new line
+                } else if (pageText.length > 0 && !pageText.endsWith('\n')) {
+                    // Same line - check for large X gap (column separator)
+                    if (lastX !== null) {
+                        const gap = currentX - (lastX + lastWidth);
+                        if (gap > 50) {
+                            // Large gap indicates column separator - add tab or multiple spaces
+                            pageText += '\t';
+                        } else if (!pageText.endsWith(' ') && !pageText.endsWith('\t')) {
+                            pageText += ' ';
+                        }
+                    } else if (!pageText.endsWith(' ')) {
+                        pageText += ' ';
+                    }
                 }
 
                 pageText += item.str;
                 lastY = currentY;
+                lastX = currentX;
+                lastWidth = itemWidth;
             }
 
             fullText += pageText + '\n';
@@ -462,7 +480,12 @@ function parseMyChartSingle(labInfo, text) {
 // Clean test name - remove garbage prefixes from PDF parsing
 function cleanTestName(name) {
     if (!name) return '';
-    
+
+    // Handle two-column layouts: if there's a tab, only take the first column
+    if (name.includes('\t')) {
+        name = name.split('\t')[0];
+    }
+
     // First, normalize whitespace
     let cleaned = name
         .replace(/\s{2,}/g, ' ')  // Multiple spaces to single space
@@ -801,7 +824,8 @@ const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9\s\-\/\(\),]{2,50})[\s\n
     }
 
     // Pattern 4: "Normal range: below <X" format (like CRP and A1C)
-    const belowPattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]+?)\s+Normal range:\s*below\s*<?([\d.]+)\s*([A-Za-z\/\*%]+)[^V]*Value\s+([\d.]+)/gi;
+    // Updated to handle two-column layouts where "Value Value" appears on same line
+    const belowPattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]+?)\s+Normal range:\s*below\s*<?([\d.]+)\s*([A-Za-z\/\*%]+)[\s\S]*?Value[\s\S]*?([\d.]+)/gi;
 
     while ((match = belowPattern.exec(text)) !== null) {
         let testName = cleanTestName(match[1]);
