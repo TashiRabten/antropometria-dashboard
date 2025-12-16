@@ -1630,8 +1630,20 @@ if (headerMatch) {
             
         })
         .map(({ dateObj }) => dateObj);
-    
-    console.log(`📅 ${headerDates.length} datas válidas encontradas no cabeçalho`);
+
+    // Remove consecutive duplicate dates (from two-column layouts)
+    headerDates = headerDates.filter((date, index) => {
+        if (index === 0) return true;
+        const prevDate = headerDates[index - 1];
+        const isDuplicate = date.getTime() === prevDate.getTime();
+        if (isDuplicate) {
+            console.log(`  ⊗ Removendo data duplicada: ${date.toLocaleDateString('pt-BR')}`);
+        }
+        return !isDuplicate;
+    });
+
+    console.log(`📅 ${headerDates.length} datas únicas encontradas no cabeçalho`);
+    headerDates.forEach((d, i) => console.log(`  ${i + 1}. ${d.toLocaleDateString('pt-BR')}`));
 } else {
     console.log('⚠️ Header pattern not matched');
 }
