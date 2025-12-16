@@ -375,9 +375,9 @@ async function clearAllLabs() {
 
         console.log(`🗑️ Deletando ${labs.length} exame(s)...`);
 
-        // Delete each lab (both from Storage and Firestore)
+        // Delete each lab (both from Storage and Firestore) - no confirmation per file
         for (const lab of labs) {
-            await deleteLabFile(lab.id);
+            await _deleteLabFileInternal(userId, lab.id);
         }
 
         // Clear OCR cache
@@ -392,7 +392,29 @@ async function clearAllLabs() {
     }
 }
 
-// Delete a single lab file (Firebase version)
+// Internal delete function (no confirmation) - used by clearAllLabs
+async function _deleteLabFileInternal(userId, labId) {
+    // Get lab metadata to find storage path
+    const lab = await firebaseDB.get(userId, labId);
+
+    if (lab) {
+        // Extract extension from filename
+        const ext = lab.filename.split('.').pop().toLowerCase();
+
+        // Delete from Cloud Storage
+        await firebaseStorage.delete(userId, labId, ext);
+    }
+
+    // Delete from Firestore
+    await firebaseDB.delete(userId, labId);
+
+    // Delete OCR cache
+    await firebaseDB.deleteOCRCache(userId, labId);
+
+    console.log(`✅ Exame deletado: ${labId}`);
+}
+
+// Delete a single lab file (Firebase version) - with confirmation for UI
 async function deleteLabFile(labId) {
     if (!confirm('Tem certeza que deseja deletar este exame?')) {
         return;
@@ -405,25 +427,7 @@ async function deleteLabFile(labId) {
     }
 
     try {
-        // Get lab metadata to find storage path
-        const lab = await firebaseDB.get(userId, labId);
-
-        if (lab) {
-            // Extract extension from filename
-            const ext = lab.filename.split('.').pop().toLowerCase();
-
-            // Delete from Cloud Storage
-            await firebaseStorage.delete(userId, labId, ext);
-        }
-
-        // Delete from Firestore
-        await firebaseDB.delete(userId, labId);
-
-        // Delete OCR cache
-        await firebaseDB.deleteOCRCache(userId, labId);
-
-        console.log(`✅ Exame deletado: ${labId}`);
-
+        await _deleteLabFileInternal(userId, labId);
     } catch (error) {
         console.error('❌ Erro ao deletar exame:', error);
         alert('Erro ao deletar exame. Verifique o console.');

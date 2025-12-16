@@ -416,7 +416,8 @@ function parseMyChartSingle(labInfo, text) {
     } else {
         // Fallback: Extract any ALL-CAPS title before "Collected on"
         // Make it greedy to capture full title including commas and numbers
-        const genericTitleMatch = text.match(/\b([A-Z][A-Z\s\d\-\/\(\),&]{4,80})\s{2,}Collected on/);
+        // Updated: [\s\n]+ to handle newlines from improved PDF extraction
+        const genericTitleMatch = text.match(/\b([A-Z][A-Z\s\d\-\/\(\),&]{4,80})[\s\n]+Collected on/);
         if (genericTitleMatch) {
             let genericTitle = genericTitleMatch[1].trim();
             // Clean up the title - remove trailing words that are just markers
@@ -550,7 +551,8 @@ function extractMyChartSingleValues(text) {
     // IMPORTANT: Test name can start with digit-dash (e.g., "25-OH Vitamin D")
     // Use programmatic filtering instead of regex backreferences for more reliability
     // Changed to greedy matching and require proper test name structure
-const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9\s\-\/\(\),]{2,50})\s+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/]+)/gi;
+// Updated to handle newlines between test name and "Normal" (from improved PDF extraction)
+const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9\s\-\/\(\),]{2,50})[\s\n]+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\/\*%\d]+)/gi;
 
     let match;
     while ((match = visualChartPattern.exec(text)) !== null) {
@@ -632,7 +634,8 @@ const visualChartPattern = /((?:\d+-)?[A-Za-z][A-Za-z0-9\s\-\/\(\),]{2,50})\s+No
     // Limited to max 80 chars for test name to avoid capturing garbage from previous tests
     // NOTE: This pattern requires test name to start with a LETTER (not digit)
     // For names starting with digits (like "25-OH"), use Pattern 6 above
-    const rangePattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]{0,80}?)\s{2,}Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\*%\/\d]+)/gi;
+    // Updated: Use [\s\n]+ to handle newlines between test name and "Normal"
+    const rangePattern = /([A-Za-z][A-Za-z0-9\s\-\/\(\),]{0,80}?)[\s\n]+Normal\s+(?:range|value):\s*([\d.]+)\s*-\s*([\d.]+)\s+([A-Za-z\*%\/\d]+)/gi;
 
     // Reuse match variable declared earlier
     let matchCount = 0;
@@ -983,7 +986,8 @@ function parseHealow(labInfo, text) {
             console.log('🏷️ Título encontrado antes do asterisco (Healow):', labInfo.labType);
         } else {
             // Second fallback: Look for pattern "TITLE  F   " (Healow without asterisk)
-            const healowPattern = text.match(/\b([A-Z][A-Z\s\d\-\/\(\),&]{4,60}?)\s{2,}F\s{2,}/);
+            // Updated: [\s\n]+ to handle newlines
+            const healowPattern = text.match(/\b([A-Z][A-Z\s\d\-\/\(\),&]{4,60}?)[\s\n]+F[\s\n]+/);
             if (healowPattern) {
                 labInfo.labType = cleanLabType(healowPattern[1]
                     .replace(/\s+AND\s+/gi, ' & ')
@@ -1209,8 +1213,9 @@ function parseMyChartPeriod(labInfo, text) {
         console.log('🏷️ Tipo identificado:', labInfo.labType);
     } else {
         // Fallback: Extract any ALL-CAPS title before "- Past Results" or just before "Standard Range"
+        // Updated: [\s\n]+ to handle newlines
         const genericMatch = text.match(/([A-Z][A-Z\s\d\-\/\(\),&]{4,80}?)\s*-?\s*Past Results/i) ||
-                             text.match(/([A-Z][A-Z\s\d\-\/\(\),&]{4,80}?)\s{2,}Name\s+Standard Range/);
+                             text.match(/([A-Z][A-Z\s\d\-\/\(\),&]{4,80}?)[\s\n]+Name\s+Standard Range/);
         if (genericMatch) {
             labInfo.labType = cleanLabType(genericMatch[1]
                 .replace(/\s+AND\s+/gi, ' & ')
@@ -1547,8 +1552,8 @@ function extractUIHealthValues(text) {
     // Must be specific lab tests to avoid false positives
     console.log('\n🔍 Tentando Pattern 4 (sem unidade - A1C e similares)...');
     const noUnitTests = ['Hemoglobin A1c', 'A1C', 'HbA1c', 'eGFR'];
-    // Match "TestName: Value" at end of line or followed by whitespace
-    const pattern4 = /^([A-Za-z][A-Za-z0-9\s]{1,30}?):\s*([\d.]+)\s*$/gim;
+    // Match "TestName: Value" at end of line - use space instead of \s to avoid capturing newlines in name
+    const pattern4 = /^([A-Za-z][A-Za-z0-9 ]{1,30}?):\s*([\d.]+)\s*$/gim;
 
     let matchCount4 = 0;
     while ((match = pattern4.exec(text)) !== null) {
@@ -2062,7 +2067,8 @@ function extractPeriodValues(text, dates) {
 
     // Also try generic pattern to catch any remaining tests
     // Pattern: TestName  RangeOrValue  Value1 H/L  Value2 H/L...
-    const genericPattern = /([A-Za-z][A-Za-z\s\/\-]+?)\s{2,}([<>]?[\d.]+(?:\s*-\s*[\d.]+)?)\s+([A-Za-z\*\/\d%]*)\s*([\d.]+(?:\s*[HL])?(?:\s+[\d.]+(?:\s*[HL])?)+)/gi;
+    // Updated: [\s\n]+ to handle newlines
+    const genericPattern = /([A-Za-z][A-Za-z\s\/\-]+?)[\s\n]+([<>]?[\d.]+(?:\s*-\s*[\d.]+)?)\s+([A-Za-z\*\/\d%]*)\s*([\d.]+(?:\s*[HL])?(?:\s+[\d.]+(?:\s*[HL])?)+)/gi;
 
     let genericMatch;
     while ((genericMatch = genericPattern.exec(text)) !== null) {
