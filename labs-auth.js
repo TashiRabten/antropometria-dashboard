@@ -2,10 +2,10 @@
 // Simple client-side authentication for personal use
 
 // Credentials (hardcoded for personal dashboard)
-const VALID_CREDENTIALS = {
-    username: 'Julia Barichello',
-    password: 'Turtle'
-};
+const VALID_CREDENTIALS = [
+    { username: 'Julia Barichello', password: 'Turtle' },
+    { username: 'Natalia Medina', password: 'Bodisatva' }
+];
 
 // Session key
 const SESSION_KEY = 'labs_authenticated';
@@ -40,7 +40,8 @@ function handleLogin(event) {
     const errorDiv = document.getElementById('login-error');
 
     // Validate credentials
-    if (username === VALID_CREDENTIALS.username && password === VALID_CREDENTIALS.password) {
+    const validUser = VALID_CREDENTIALS.find(cred => cred.username === username && cred.password === password);
+    if (validUser) {
         // Set session
         sessionStorage.setItem(SESSION_KEY, 'true');
 
