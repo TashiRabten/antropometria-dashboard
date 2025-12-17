@@ -126,6 +126,27 @@ function mapUsernameToEmail(username) {
     return userMap[normalized] || `${normalized.replace(/\s+/g, '')}@antropometria.com`;
 }
 
+// Get the data owner ID - allows multiple users to share the same data
+// All linked users will access Julia's data
+function getDataOwnerId() {
+    // Julia's Firebase UID - all linked users share this data
+    const JULIA_UID = 'V1dJnjgqdwQ512Fu5eqZvpkXsr13';
+
+    // Users who share access to Julia's data
+    const linkedUsers = [
+        'julia@antropometria.com',
+        'natalia@antropometria.com'
+    ];
+
+    if (currentUser && linkedUsers.includes(currentUser.email.toLowerCase())) {
+        // All linked users access Julia's data
+        return JULIA_UID;
+    }
+
+    // For non-linked users, use their own UID
+    return currentUser ? currentUser.uid : null;
+}
+
 // Show login screen
 function showLoginScreen() {
     const loginScreen = document.getElementById('login-screen');
@@ -148,8 +169,13 @@ function showMainContent() {
     if (logoutNav) logoutNav.style.display = 'block';
 }
 
-// Get current user ID
+// Get current user ID (uses shared data owner ID for linked users)
 function getCurrentUserId() {
+    return getDataOwnerId();
+}
+
+// Get actual Firebase UID (for Firebase Auth operations only)
+function getActualUserId() {
     return currentUser ? currentUser.uid : null;
 }
 
@@ -187,6 +213,8 @@ window.firebaseAuth = {
     handleLogin,
     logout,
     getCurrentUserId,
+    getActualUserId,
+    getDataOwnerId,
     getCurrentUserEmail,
     createInitialUser,
     get currentUser() { return currentUser; }
