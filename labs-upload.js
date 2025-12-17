@@ -305,17 +305,19 @@ async function extractPDFTextFromArrayBuffer(arrayBuffer) {
                     pageText += '\n';
                     lastX = null; // Reset X tracking for new line
                 } else if (pageText.length > 0 && !pageText.endsWith('\n')) {
-                    // Same line - check for large X gap (column separator)
+                    // Same line - check for X gap to determine spacing
                     if (lastX !== null) {
                         const gap = currentX - (lastX + lastWidth);
                         if (gap > 50) {
-                            // Large gap indicates column separator - add tab or multiple spaces
+                            // Large gap indicates column separator - add tab
                             pageText += '\t';
-                        } else if (!pageText.endsWith(' ') && !pageText.endsWith('\t')) {
-                            pageText += ' ';
+                        } else if (gap > 3) {
+                            // Medium gap indicates word separator - add space
+                            if (!pageText.endsWith(' ') && !pageText.endsWith('\t')) {
+                                pageText += ' ';
+                            }
                         }
-                    } else if (!pageText.endsWith(' ')) {
-                        pageText += ' ';
+                        // Small gap (<=3) = same word, no space needed
                     }
                 }
 
