@@ -383,6 +383,13 @@ function generateLabId(filename) {
 
 // Identify PDF format
 function identifyPDFFormat(text, filename) {
+    // Check for InBody format (body composition / bioimpedance analysis)
+    // Identifiers: "InBody", "COMPOSIÇÃO CORPORAL", "IMPEDÂNCIA", "Massa Magra"
+    if ((text.includes('InBody') || text.includes('COMPOSIÇÃO CORPORAL')) &&
+        (text.includes('IMPEDÂNCIA') || text.includes('Massa Magra') || text.includes('Água Corporal Total'))) {
+        return 'inbody';
+    }
+
     // Check for Memorial Health format (clean OCR'd lab reports)
     // Identifiers: "PATIENT DEMOGRAPHICS" + "Date of Report" + simple "Test: Value" format
     if (text.includes('PATIENT DEMOGRAPHICS') && text.includes('Date of Report:') &&
@@ -444,6 +451,8 @@ function identifyPDFFormat(text, filename) {
 // Parse PDF based on format
 async function parsePDF(labInfo, text) {
     switch (labInfo.format) {
+        case 'inbody':
+            return parseInBody(labInfo, text);
         case 'mychart-single':
             return parseMyChartSingle(labInfo, text);
         case 'healow':
@@ -2487,6 +2496,192 @@ function extractPeriodValues(text, dates) {
     }
 
     console.log(`📊 Total: ${Object.keys(values).length} testes com múltiplos valores`);
+    return values;
+}
+
+// Parse InBody Format (body composition / bioimpedance analysis)
+function parseInBody(labInfo, text) {
+    console.log('📋 Parseando formato InBody...');
+
+    // Set lab type
+    labInfo.labType = 'Composição Corporal (InBody)';
+
+    // Extract date - look specifically for "Data" followed by date in format DD/MM/YYYY
+    // Must be after "DADOS DO EXAME" to avoid other dates
+    const dateMatch = text.match(/DADOS DO EXAME[\s\S]{0,100}Data[\s:]+(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+    if (dateMatch) {
+        const day = parseInt(dateMatch[1]);
+        const month = parseInt(dateMatch[2]);
+        const year = parseInt(dateMatch[3]);
+        labInfo.collectionDate = new Date(year, month - 1, day);
+        labInfo.dates = [labInfo.collectionDate];
+        console.log(`📅 Data da coleta: ${labInfo.collectionDate.toLocaleDateString()}`);
+    } else {
+        console.log('⚠️ Data não encontrada no padrão esperado');
+    }
+
+    // Extract InBody values
+    labInfo.values = extractInBodyValues(text);
+    console.log(`📊 ${Object.keys(labInfo.values).length} valores extraídos`);
+
+    return labInfo;
+}
+
+// Extract values from InBody format
+function extractInBodyValues(text) {
+    const values = {};
+
+    console.log('🔍 Extraindo valores do formato InBody...');
+
+    // First, extract impedance sections separately to avoid confusion between 20kHz and 100kHz
+    const impedance20Section = text.match(/20 kHz([\s\S]*?)100 kHz/i);
+    const impedance100Section = text.match(/100 kHz([\s\S]*?)(?:HISTÓRICO|$)/i);
+
+    // InBody measurements and their patterns
+    // Note: Using [\d.,]+ to match both comma and dot decimals (e.g., "41,7" or "41.7")
+    // Using \s+ to match multiple whitespace characters (spaces, newlines, etc.)
+    const inbodyTests = {
+        // Body composition
+        'Água Corporal Total': /Água Corporal Total\s+([\d.,]+)\s*kg/i,
+        'Massa Magra Seca': /Massa Magra Seca\s+([\d.,]+)\s*kg/i,
+        'Massa de Gordura Corporal': /Massa de Gordura Corporal\s+([\d.,]+)\s*kg/i,
+        'Peso Corporal Total': /Peso Corporal Total\s+([\d.,]+)\s*kg/i,
+        'Peso': /(?:ANÁLISE|MÚSCULO-GORDURA)[\s\S]{0,100}Peso\s+([\d.,]+)\s*kg/i,
+
+        // Muscle and fat analysis
+        'Massa Muscular Esquelética': /Massa Muscular Esquelética\s+([\d.,]+)\s*kg/i,
+        'Massa Magra Atual': /Massa Magra Atual\s+([\d.,]+)\s*kg/i,
+
+        // Obesity analysis
+        'IMC': /IMC[^)]*\)\s+([\d.,]+)\s*kg\/m/i,
+        'Percentual de Gordura Corporal': /Percentual de Gordura Corporal[^)]*\)\s+([\d.,]+)\s*%/i,
+        'Percentual de Gordura': /(?:HISTÓRICO|ACOMPANHAMENTO)[\s\S]{0,100}Percentual de Gordura\s+([\d.,]+)\s*%/i,
+
+        // Metabolic parameters
+        'Taxa Metabólica Basal': /Taxa Metabólica Basal[^)]*\)\s+([\d.,]+)\s*kcal/i,
+        'SMI': /SMI[^)]*\)\s+([\d.,]+)\s*kg\/m/i,
+
+        // Goals
+        'Meta de Controle de Massa Magra': /Meta de Controle de Massa Magra\s+([+-][\d.,]+)\s*kg/i,
+        'Meta de Controle de Gordura': /Meta de Controle de Gordura\s+([+-][\d.,]+)\s*kg/i,
+
+        // Personal data
+        'Idade': /Idade\s+(\d+)\s*anos/i,
+        'Altura': /Altura\s+([\d.,]+)\s*cm/i,
+    };
+
+    // Impedance patterns (will be applied to specific sections)
+    const impedanceTests = {
+        'Braço Direito': /Braço Direito\s+([\d.,]+)/i,
+        'Braço Esquerdo': /Braço Esquerdo\s+([\d.,]+)/i,
+        'Tronco': /Tronco\s+([\d.,]+)/i,
+        'Perna Direita': /Perna Direita\s+([\d.,]+)/i,
+        'Perna Esquerda': /Perna Esquerda\s+([\d.,]+)/i,
+    };
+
+    // Helper function to convert Portuguese number format to JavaScript format
+    function convertPortugueseNumber(value) {
+        // Em português: 1.600,50 (ponto = milhares, vírgula = decimal)
+        // Para parseFloat: 1600.50 (sem milhares, ponto = decimal)
+        if (value.includes('.') && value.includes(',')) {
+            // Tem ambos: ponto é separador de milhares, vírgula é decimal
+            // "1.600,50" -> "1600.50"
+            return value.replace(/\./g, '').replace(',', '.');
+        } else if (value.includes(',')) {
+            // Só vírgula: é o separador decimal
+            // "41,7" -> "41.7"
+            return value.replace(',', '.');
+        } else if (value.includes('.')) {
+            // Só ponto: pode ser separador de milhares OU decimal
+            // Se tem 3 dígitos após ponto, é milhares: "1.600" -> "1600"
+            // Se tem 1-2 dígitos, é decimal: "41.7" (já está OK)
+            const parts = value.split('.');
+            if (parts.length === 2 && parts[1].length === 3 && parts[1].match(/^\d{3}$/)) {
+                // É separador de milhares
+                return value.replace('.', '');
+            }
+        }
+        return value;
+    }
+
+    // Extract each test value
+    for (const [testName, pattern] of Object.entries(inbodyTests)) {
+        const match = text.match(pattern);
+        if (match) {
+            let value = convertPortugueseNumber(match[1]);
+            const numericValue = parseFloat(value);
+
+            if (!isNaN(numericValue)) {
+                // Determine unit
+                let unit = '';
+                if (testName.includes('Água') || testName.includes('Massa') || testName.includes('Peso') || testName.includes('Meta')) {
+                    unit = 'kg';
+                } else if (testName.includes('Percentual') || testName.includes('Gordura') && testName.includes('%')) {
+                    unit = '%';
+                } else if (testName.includes('IMC')) {
+                    unit = 'kg/m²';
+                } else if (testName.includes('Taxa Metabólica')) {
+                    unit = 'kcal';
+                } else if (testName.includes('SMI')) {
+                    unit = 'kg/m²';
+                } else if (testName.includes('Idade')) {
+                    unit = 'anos';
+                } else if (testName.includes('Altura')) {
+                    unit = 'cm';
+                }
+
+                values[testName] = {
+                    value: numericValue,
+                    unit: unit,
+                    status: 'normal' // InBody doesn't have H/L markers
+                };
+
+                console.log(`  ✓ ${testName}: ${numericValue} ${unit}`);
+            }
+        }
+    }
+
+    // Extract impedance values from separate sections
+    if (impedance20Section && impedance20Section[1]) {
+        const section20 = impedance20Section[1];
+        for (const [bodyPart, pattern] of Object.entries(impedanceTests)) {
+            const match = section20.match(pattern);
+            if (match) {
+                let value = convertPortugueseNumber(match[1]);
+                const numericValue = parseFloat(value);
+                if (!isNaN(numericValue)) {
+                    const testName = `Impedância ${bodyPart} (20kHz)`;
+                    values[testName] = {
+                        value: numericValue,
+                        unit: 'Ω',
+                        status: 'normal'
+                    };
+                    console.log(`  ✓ ${testName}: ${numericValue} Ω`);
+                }
+            }
+        }
+    }
+
+    if (impedance100Section && impedance100Section[1]) {
+        const section100 = impedance100Section[1];
+        for (const [bodyPart, pattern] of Object.entries(impedanceTests)) {
+            const match = section100.match(pattern);
+            if (match) {
+                let value = convertPortugueseNumber(match[1]);
+                const numericValue = parseFloat(value);
+                if (!isNaN(numericValue)) {
+                    const testName = `Impedância ${bodyPart} (100kHz)`;
+                    values[testName] = {
+                        value: numericValue,
+                        unit: 'Ω',
+                        status: 'normal'
+                    };
+                    console.log(`  ✓ ${testName}: ${numericValue} Ω`);
+                }
+            }
+        }
+    }
+
     return values;
 }
 
