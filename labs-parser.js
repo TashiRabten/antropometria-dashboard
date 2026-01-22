@@ -2533,10 +2533,6 @@ function extractInBodyValues(text) {
 
     console.log('🔍 Extraindo valores do formato InBody...');
 
-    // First, extract impedance sections separately to avoid confusion between 20kHz and 100kHz
-    const impedance20Section = text.match(/20 kHz([\s\S]*?)100 kHz/i);
-    const impedance100Section = text.match(/100 kHz([\s\S]*?)(?:HISTÓRICO|$)/i);
-
     // InBody measurements and their patterns
     // Note: Using [\d.,]+ to match both comma and dot decimals (e.g., "41,7" or "41.7")
     // Using \s+ to match multiple whitespace characters (spaces, newlines, etc.)
@@ -2570,14 +2566,8 @@ function extractInBodyValues(text) {
         'Altura': /Altura\s+([\d.,]+)\s*cm/i,
     };
 
-    // Impedance patterns (will be applied to specific sections)
-    const impedanceTests = {
-        'Braço Direito': /Braço Direito\s+([\d.,]+)/i,
-        'Braço Esquerdo': /Braço Esquerdo\s+([\d.,]+)/i,
-        'Tronco': /Tronco\s+([\d.,]+)/i,
-        'Perna Direita': /Perna Direita\s+([\d.,]+)/i,
-        'Perna Esquerda': /Perna Esquerda\s+([\d.,]+)/i,
-    };
+    // Impedance body parts in order
+    const impedanceBodyParts = ['Braço Direito', 'Braço Esquerdo', 'Tronco', 'Perna Direita', 'Perna Esquerda'];
 
     // Helper function to convert Portuguese number format to JavaScript format
     function convertPortugueseNumber(value) {
@@ -2614,16 +2604,16 @@ function extractInBodyValues(text) {
             if (!isNaN(numericValue)) {
                 // Determine unit
                 let unit = '';
-                if (testName.includes('Água') || testName.includes('Massa') || testName.includes('Peso') || testName.includes('Meta')) {
-                    unit = 'kg';
-                } else if (testName.includes('Percentual') || testName.includes('Gordura') && testName.includes('%')) {
+                if (testName.includes('Taxa Metabólica') || testName.includes('TMB')) {
+                    unit = 'kcal';
+                } else if (testName.includes('Percentual') || (testName.includes('Gordura') && testName.includes('%'))) {
                     unit = '%';
                 } else if (testName.includes('IMC')) {
                     unit = 'kg/m²';
-                } else if (testName.includes('Taxa Metabólica')) {
-                    unit = 'kcal';
                 } else if (testName.includes('SMI')) {
                     unit = 'kg/m²';
+                } else if (testName.includes('Água') || testName.includes('Massa') || testName.includes('Peso') || testName.includes('Meta')) {
+                    unit = 'kg';
                 } else if (testName.includes('Idade')) {
                     unit = 'anos';
                 } else if (testName.includes('Altura')) {
@@ -2641,44 +2631,45 @@ function extractInBodyValues(text) {
         }
     }
 
-    // Extract impedance values from separate sections
-    if (impedance20Section && impedance20Section[1]) {
-        const section20 = impedance20Section[1];
-        for (const [bodyPart, pattern] of Object.entries(impedanceTests)) {
-            const match = section20.match(pattern);
-            if (match) {
-                let value = convertPortugueseNumber(match[1]);
-                const numericValue = parseFloat(value);
-                if (!isNaN(numericValue)) {
-                    const testName = `Impedância ${bodyPart} (20kHz)`;
-                    values[testName] = {
-                        value: numericValue,
-                        unit: 'Ω',
-                        status: 'normal'
-                    };
-                    console.log(`  ✓ ${testName}: ${numericValue} Ω`);
-                }
+    // Extract impedance values
+    // In the PDF, impedance values appear after "DADOS DE IMPEDÂNCIA (Z)" section
+    // The format is: all body parts listed twice (first 5 are 20kHz, next 5 are 100kHz)
+    const impedanceSection = text.match(/DADOS DE IMPEDÂNCIA[\s\S]*?(?:HISTÓRICO|$)/i);
+
+    if (impedanceSection) {
+        const impedanceText = impedanceSection[0];
+
+        // Extract all impedance values in order
+        const impedanceValues = [];
+        const valuePattern = /(Braço Direito|Braço Esquerdo|Tronco|Perna Direita|Perna Esquerda)\s+([\d.,]+)/gi;
+        let match;
+
+        while ((match = valuePattern.exec(impedanceText)) !== null) {
+            const bodyPart = match[1];
+            let value = convertPortugueseNumber(match[2]);
+            const numericValue = parseFloat(value);
+
+            if (!isNaN(numericValue)) {
+                impedanceValues.push({
+                    bodyPart: bodyPart,
+                    value: numericValue
+                });
             }
         }
-    }
 
-    if (impedance100Section && impedance100Section[1]) {
-        const section100 = impedance100Section[1];
-        for (const [bodyPart, pattern] of Object.entries(impedanceTests)) {
-            const match = section100.match(pattern);
-            if (match) {
-                let value = convertPortugueseNumber(match[1]);
-                const numericValue = parseFloat(value);
-                if (!isNaN(numericValue)) {
-                    const testName = `Impedância ${bodyPart} (100kHz)`;
-                    values[testName] = {
-                        value: numericValue,
-                        unit: 'Ω',
-                        status: 'normal'
-                    };
-                    console.log(`  ✓ ${testName}: ${numericValue} Ω`);
-                }
-            }
+        // First 5 values are 20kHz, next 5 are 100kHz
+        for (let i = 0; i < impedanceValues.length; i++) {
+            const frequency = i < 5 ? '20kHz' : '100kHz';
+            const data = impedanceValues[i];
+            const testName = `Impedância ${data.bodyPart} (${frequency})`;
+
+            values[testName] = {
+                value: data.value,
+                unit: 'Ω',
+                status: 'normal'
+            };
+
+            console.log(`  ✓ ${testName}: ${data.value} Ω`);
         }
     }
 
