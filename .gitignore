@@ -1,1 +1,6 @@
 Labs/
+.claude/
+
+# API keys and credentials — gitignored, use *.template.js as reference
+firebase-config.js
+labs-auth.js
