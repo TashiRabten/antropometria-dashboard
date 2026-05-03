@@ -6,6 +6,18 @@
 let allData = null;
 let latestData = null;
 const assetVersion = Date.now().toString();
+const DASHBOARD_BLOCKED_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+function isSafeDashboardObjectKey(key) {
+    return typeof key === 'string' && key.length > 0 && !DASHBOARD_BLOCKED_OBJECT_KEYS.has(key);
+}
+
+function getDashboardObjectValue(object, key) {
+    if (!object || !isSafeDashboardObjectKey(key) || !Object.prototype.hasOwnProperty.call(object, key)) {
+        return undefined;
+    }
+    return Object.getOwnPropertyDescriptor(object, key)?.value;
+}
 
 // Função principal de inicialização
 document.addEventListener('DOMContentLoaded', function() {
@@ -204,11 +216,14 @@ function updateDuthangaMetrics() {
     updateElement('refeicao-records', refeicaoCount);
     
     // Últimas medições
-    if (latestData['Duthanga Geral']) {
-        updateElement('geral-last', formatDate(latestData['Duthanga Geral'].Date));
+    const geralLatest = getDashboardObjectValue(latestData, 'Duthanga Geral');
+    const refeicaoLatest = getDashboardObjectValue(latestData, 'Duthanga Uma Refeicao');
+
+    if (geralLatest) {
+        updateElement('geral-last', formatDate(geralLatest.Date));
     }
-    if (latestData['Duthanga Uma Refeicao']) {
-        updateElement('refeicao-last', formatDate(latestData['Duthanga Uma Refeicao'].Date));
+    if (refeicaoLatest) {
+        updateElement('refeicao-last', formatDate(refeicaoLatest.Date));
     }
 }
 
@@ -243,11 +258,6 @@ function getIMCStatus(imc) {
     if (imc <= 24.9) return 'Peso normal';
     if (imc <= 29.9) return 'Sobrepeso';
     return 'Obesidade';
-}
-
-// Alias para compatibilidade
-function getIMCCategory(imc) {
-    return getIMCStatus(imc);
 }
 
 // Função utilitária para atualizar elementos DOM
@@ -513,7 +523,7 @@ function exportToCSV(data, filename) {
     const headers = Object.keys(data[0]);
     const csvContent = [
         headers.join(','),
-        ...data.map(row => headers.map(header => row[header] || '').join(','))
+        ...data.map(row => headers.map(header => getDashboardObjectValue(row, header) || '').join(','))
     ].join('\n');
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

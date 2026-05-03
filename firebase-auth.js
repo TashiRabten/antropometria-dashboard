@@ -124,7 +124,9 @@ function mapUsernameToEmail(username) {
     }
 
     // Otherwise, use mapping
-    return userMap[normalized] || `${normalized.replace(/\s+/g, '')}@antropometria.com`;
+    return Object.prototype.hasOwnProperty.call(userMap, normalized)
+        ? Object.getOwnPropertyDescriptor(userMap, normalized).value
+        : `${normalized.replace(/\s+/g, '')}@antropometria.com`;
 }
 
 // Get the data owner ID - allows multiple users to share the same data

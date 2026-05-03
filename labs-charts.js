@@ -250,8 +250,9 @@ function initializeTrendChart() {
                             }
                             label += context.parsed.y;
                             label += ' ' + (data.unit || '');
-                            if (data.statuses && data.statuses[context.dataIndex]) {
-                                label += ` (${data.statuses[context.dataIndex]})`;
+                            const pointStatus = Array.isArray(data.statuses) ? data.statuses.at(context.dataIndex) : null;
+                            if (pointStatus) {
+                                label += ` (${pointStatus})`;
                             }
                             return label;
                         }

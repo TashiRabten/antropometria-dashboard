@@ -7,7 +7,7 @@
 // 5. UI Health Pathology Laboratories Format
 
 // Initialize PDF.js
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 
 // Global lab data
 var allLabs = [];
