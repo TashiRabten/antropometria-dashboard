@@ -4,12 +4,25 @@
 // Variáveis globais
 let allData = null;
 let latestData = null;
+const assetVersion = Date.now().toString();
 
 // Função principal de inicialização
 document.addEventListener('DOMContentLoaded', function() {
+    refreshChartAssets();
     loadDashboardData();
     initializeCommonFeatures();
 });
+
+function withCacheBuster(url) {
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}v=${assetVersion}`;
+}
+
+function refreshChartAssets() {
+    document.querySelectorAll('img[src^="charts/"]').forEach((image) => {
+        image.src = withCacheBuster(image.getAttribute('src'));
+    });
+}
 
 // Carregar dados do JSON gerado pelo R
 async function loadDashboardData() {
@@ -18,7 +31,7 @@ async function loadDashboardData() {
         console.log('🔍 DEBUG: URL base:', window.location.href);
         console.log('🔍 DEBUG: Tentando carregar:', 'charts/dashboard_data.json');
         
-        const response = await fetch('charts/dashboard_data.json');
+        const response = await fetch(withCacheBuster('charts/dashboard_data.json'), { cache: 'no-store' });
         console.log('🔍 DEBUG: Response status:', response.status);
         console.log('🔍 DEBUG: Response ok:', response.ok);
         console.log('🔍 DEBUG: Response headers:', response.headers);

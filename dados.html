@@ -264,7 +264,7 @@
     <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.bootstrap5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
-    <script src="dashboard.js"></script>
+    <script src="dashboard.js?v=20260503-cache"></script>
     <script>
         // Funções específicas da página de dados
         function applyFilters() {
@@ -335,6 +335,13 @@
         function refreshData() {
             location.reload();
         }
+
+        const dataAssetVersion = Date.now().toString();
+
+        function withDataCacheBuster(url) {
+            const separator = url.includes('?') ? '&' : '?';
+            return `${url}${separator}v=${dataAssetVersion}`;
+        }
         
         // Carregar dados específicos da página
         document.addEventListener('DOMContentLoaded', function() {
@@ -344,7 +351,7 @@
         
         async function loadCompleteTable() {
             try {
-                const response = await fetch('charts/complete_table.html');
+                const response = await fetch(withDataCacheBuster('charts/complete_table.html'), { cache: 'no-store' });
                 const tableHtml = await response.text();
                 
                 document.getElementById('table-loading').style.display = 'none';
@@ -423,7 +430,7 @@
         async function loadStatistics() {
             try {
                 // Carregar dados do JSON
-                const response = await fetch('charts/dashboard_data.json');
+                const response = await fetch(withDataCacheBuster('charts/dashboard_data.json'), { cache: 'no-store' });
                 const data = await response.json();
                 
                 // Extrair dados dos arrays
