@@ -1,3 +1,4 @@
+/* global db, firebase */
 // Firebase Firestore Database Module
 // Handles all database operations for lab metadata and parsed data
 

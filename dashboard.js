@@ -1,3 +1,4 @@
+/* global bootstrap */
 // Dashboard Budista - JavaScript Principal
 // Funções comuns para todas as páginas
 

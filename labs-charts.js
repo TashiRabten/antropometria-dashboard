@@ -1,3 +1,4 @@
+/* global Chart, allLabs, getObjectValue */
 // Lab Charts - Chart.js visualizations for lab trends
 
 let trendChart = null;

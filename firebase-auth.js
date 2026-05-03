@@ -1,3 +1,4 @@
+/* global auth, db, firebase, scanLabFiles */
 // Firebase Authentication Module
 // Replaces labs-auth.js with Firebase Auth
 

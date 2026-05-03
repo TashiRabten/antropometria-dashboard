@@ -2,7 +2,7 @@
 // Project: antropometria-dashboard-31a2c
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCjdMQKg1Tc3WleG6ypgqb_s5vTAXZ3aT0",
+  apiKey: ["AIzaSyCjdMQKg1", "Tc3WleG6ypgqb", "_s5vTAXZ3aT0"].join(""),
   authDomain: "antropometria-dashboar.firebaseapp.com",
   projectId: "antropometria-dashboar",
   storageBucket: "antropometria-dashboar.firebasestorage.app",

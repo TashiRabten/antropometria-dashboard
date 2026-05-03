@@ -1,3 +1,4 @@
+/* global pdfjsLib, Tesseract, firebaseAuth, firebaseDB, bootstrap, initializeTrendChart, initializeComparisonChart, normalizeMarkerName, deleteLabFile */
 // Lab Parser - Handles 5 different lab formats
 // 1. MyChart Single-Date Format
 // 2. Follow My Health Format
@@ -1077,15 +1078,15 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
 
         if (!testName || testName.length < 2) continue;
         if (!isValidTestName(testName)) continue;
-        if (values[testName]) continue;
+        if (hasObjectValue(values, testName)) continue;
 
         if (!isNaN(value)) {
-            values[testName] = {
+            setObjectValue(values, testName, {
                 value: value,
                 unit: unit,
                 range: `> ${threshold}`,
                 status: value >= threshold ? 'normal' : 'low'
-            };
+            });
             console.log(`  ✓ ${testName}: ${value} ${unit} (${value >= threshold ? 'normal' : 'low'})`);
         }
     }
@@ -1104,15 +1105,15 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
 
         if (!testName || testName.length < 2) continue;
         if (!isValidTestName(testName)) continue;
-        if (values[testName]) continue;
+        if (hasObjectValue(values, testName)) continue;
 
         if (!isNaN(value)) {
-            values[testName] = {
+            setObjectValue(values, testName, {
                 value: value,
                 unit: unit,
                 range: `< ${threshold}`,
                 status: value < threshold ? 'normal' : 'high'
-            };
+            });
             console.log(`  ✓ ${testName}: ${value} ${unit}`);
         }
     }
@@ -1132,18 +1133,18 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
         const status = match[6].toLowerCase();
 
         if (!testName || testName.length < 2) continue;
-        if (values[testName]) continue;
+        if (hasObjectValue(values, testName)) continue;
 
         // Skip if value equals range boundaries
         if (value === lowRange || value === highRange) continue;
 
         if (!isNaN(value)) {
-            values[testName] = {
+            setObjectValue(values, testName, {
                 value: value,
                 unit: unit,
                 range: `${lowRange} - ${highRange}`,
                 status: status
-            };
+            });
             console.log(`  ✓ ${testName}: ${value} ${unit} (${status})`);
         }
     }
@@ -1182,7 +1183,7 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
         }
 
         // Skip if already parsed
-        if (values[testName]) {
+        if (hasObjectValue(values, testName)) {
             console.log(`  ⚠️ Skipping "${testName}" - already parsed`);
             continue;
         }
@@ -1200,12 +1201,12 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
                 status = value < lowRange ? 'normal' : 'high';
             }
 
-            values[testName] = {
+            setObjectValue(values, testName, {
                 value: value,
                 unit: unit,
                 range: range,
                 status: status
-            };
+            });
             console.log(`  ✓ ${testName}: ${value} ${unit} (split Value pattern)`);
         }
     }
@@ -1227,7 +1228,7 @@ while ((vitMatch = vitaminPattern.exec(text)) !== null) {
 
     if (!testName || testName.length < 2) continue;
     if (!isValidTestName(testName)) continue;
-    if (values[testName]) continue;
+    if (hasObjectValue(values, testName)) continue;
 
     // Get segment after match
     const startPos = vitMatch.index + vitMatch[0].length;
@@ -1249,12 +1250,12 @@ while ((vitMatch = vitaminPattern.exec(text)) !== null) {
         if (value < lowRange) status = 'low';
         else if (value > highRange) status = 'high';
 
-        values[testName] = {
+        setObjectValue(values, testName, {
             value: value,
             unit: unit,
             range: `${lowRange} - ${highRange}`,
             status: status
-        };
+        });
         console.log(`  ✓ ${testName}: ${value} ${unit} (${status}) [Vitamin pattern]`);
     }
 
@@ -1492,7 +1493,7 @@ function extractHealowValues(text) {
             continue;
         }
 
-        if (!values[name] && !isNaN(value)) {
+        if (!hasObjectValue(values, name) && !isNaN(value)) {
             // For CRP, determine status based on common thresholds
             // Low Risk: <1.0; Average Risk: 1.0-3.0; High Risk: >=3.0
             let status = 'normal';
@@ -1502,12 +1503,12 @@ function extractHealowValues(text) {
                 // else low risk = normal
             }
 
-            values[name] = {
+            setObjectValue(values, name, {
                 value: value,
                 unit: unit,
                 range: 'See below',
                 status: status
-            };
+            });
             console.log(`  ✓ ${name}: ${value} ${unit} (${status}) [See below pattern]`);
         }
     }
@@ -1547,7 +1548,7 @@ for (let i = 0; i < lines.length; i++) {
                 continue;
             }
 
-            if (!values[name] && !isNaN(value) && name.length > 2) {
+            if (!hasObjectValue(values, name) && !isNaN(value) && name.length > 2) {
                 // Extract unit from range if present
                 const unitMatch = rangeText.match(/\(([^)]+)\)/);
                 const unit = unitMatch ? unitMatch[1] : '';
@@ -1562,12 +1563,12 @@ for (let i = 0; i < lines.length; i++) {
                     else if (value > high) status = 'high';
                 }
 
-                values[name] = {
+                setObjectValue(values, name, {
                     value: value,
                     unit: unit,
                     range: rangeText.replace(/\([^)]+\)/, '').trim(),
                     status: status
-                };
+                });
                 console.log(`  ✓ ${name}: ${value} ${unit} [table pattern]`);
             }
         }
@@ -1812,7 +1813,7 @@ function extractUIHealthValues(text) {
         const isHeader = headerWords.some(hw => upperName.includes(hw));
 
         // Also validate using isValidTestName
-        if (testName && !isNaN(value) && !values[testName] && !isHeader && isValidTestName(testName)) {
+        if (testName && !isNaN(value) && !hasObjectValue(values, testName) && !isHeader && isValidTestName(testName)) {
             let status = 'normal';
             const rangeMatch = refRange.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/);
             if (rangeMatch) {
@@ -1831,18 +1832,18 @@ function extractUIHealthValues(text) {
                 console.log(`  📊 Threshold check: ${value} > ${threshold} = ${status}`);
             }
 
-            values[testName] = {
+            setObjectValue(values, testName, {
                 value: value,
                 unit: unit,
                 range: refRange,
                 status: status
-            };
+            });
             console.log(`  ✅ ${testName}: ${value} ${unit} (${status}) [Pattern 2]`);
         } else {
             console.log(`  ❌ Rejeitado:`, {
                 reason: !testName ? 'nome vazio' :
                         isNaN(value) ? 'valor inválido' :
-                        values[testName] ? 'já existe' :
+                        hasObjectValue(values, testName) ? 'já existe' :
                         isHeader ? 'é header' :
                         !isValidTestName(testName) ? 'nome inválido' : 'outro',
                 testName,
@@ -1882,7 +1883,7 @@ function extractUIHealthValues(text) {
         const isHeader = headerWords.some(hw => upperName.includes(hw));
 
         // Also validate using isValidTestName
-        if (testName && !isNaN(value) && !values[testName] && !isHeader && isValidTestName(testName)) {
+        if (testName && !isNaN(value) && !hasObjectValue(values, testName) && !isHeader && isValidTestName(testName)) {
             const contextStart = Math.max(0, match.index);
             const contextEnd = Math.min(text.length, match.index + match[0].length + 10);
             const context = text.substring(contextStart, contextEnd);
@@ -1891,18 +1892,18 @@ function extractUIHealthValues(text) {
             if (context.includes('(High)')) status = 'high';
             else if (context.includes('(Low)')) status = 'low';
 
-            values[testName] = {
+            setObjectValue(values, testName, {
                 value: value,
                 unit: unit,
                 range: refRange,
                 status: status
-            };
+            });
             console.log(`  ✅ ${testName}: ${value} ${unit} (${status}) [Pattern 1]`);
         } else {
             console.log(`  ❌ Rejeitado:`, {
                 reason: !testName ? 'nome vazio' :
                         isNaN(value) ? 'valor inválido' :
-                        values[testName] ? 'já existe' :
+                        hasObjectValue(values, testName) ? 'já existe' :
                         isHeader ? 'é header' :
                         !isValidTestName(testName) ? 'nome inválido' : 'outro'
             });
@@ -1942,19 +1943,19 @@ function extractUIHealthValues(text) {
         const isHeader = headerWords.some(hw => upperName.includes(hw));
 
         // Also validate using isValidTestName
-        if (testName && !isNaN(value) && !values[testName] && !isHeader && isValidTestName(testName)) {
-            values[testName] = {
+        if (testName && !isNaN(value) && !hasObjectValue(values, testName) && !isHeader && isValidTestName(testName)) {
+            setObjectValue(values, testName, {
                 value: value,
                 unit: unit,
                 range: '',
                 status: 'normal'
-            };
+            });
             console.log(`  ✅ ${testName}: ${value} ${unit} [Pattern 3]`);
         } else if (matchCount3 <= 5) {
             console.log(`  ❌ Rejeitado:`, {
                 reason: !testName ? 'nome vazio' :
                         isNaN(value) ? 'valor inválido' :
-                        values[testName] ? 'já existe' :
+                        hasObjectValue(values, testName) ? 'já existe' :
                         isHeader ? 'é header' :
                         !isValidTestName(testName) ? 'nome inválido' : 'outro'
             });
@@ -1994,7 +1995,7 @@ function extractUIHealthValues(text) {
         const upperName = testName.toUpperCase();
         const isHeader = headerWords.some(hw => upperName.includes(hw));
 
-        if (testName && !isNaN(value) && !values[testName] && !isHeader && isKnownNoUnitTest) {
+        if (testName && !isNaN(value) && !hasObjectValue(values, testName) && !isHeader && isKnownNoUnitTest) {
             // A1C is a percentage, default unit and reference
             let unit = '%';
             let range = '<5.7';
@@ -2005,18 +2006,18 @@ function extractUIHealthValues(text) {
                 else if (value >= 5.7) status = 'borderline';
             }
 
-            values[testName] = {
+            setObjectValue(values, testName, {
                 value: value,
                 unit: unit,
                 range: range,
                 status: status
-            };
+            });
             console.log(`  ✅ ${testName}: ${value} ${unit} (${status}) [Pattern 4 - no unit test]`);
         } else if (matchCount4 <= 10) {
             console.log(`  ❌ Rejeitado:`, {
                 reason: !testName ? 'nome vazio' :
                         isNaN(value) ? 'valor inválido' :
-                        values[testName] ? 'já existe' :
+                        hasObjectValue(values, testName) ? 'já existe' :
                         isHeader ? 'é header' :
                         !isKnownNoUnitTest ? 'não é teste sem unidade conhecido' : 'outro'
             });
@@ -2154,12 +2155,12 @@ function extractFollowMyHealthValues(text) {
                         displayName = displayName.replace('ABS ', '') + ' Abs';
                     }
                     
-                    values[displayName] = {
+                    setObjectValue(values, displayName, {
                         value: value,
                         unit: unit,
                         range: range,
                         status: status
-                    };
+                    });
                     console.log(`  ✓ ${displayName}: ${value} ${unit} (${status}) [Range: ${range}]`);
                 }
             }
@@ -2249,7 +2250,7 @@ function extractMemorialHealthValues(text) {
                 .replace(/\(.*?\)/g, '') // Remove parentheses content
                 .trim();
 
-            if (!isNaN(value) && !values[testName]) {
+            if (!isNaN(value) && !hasObjectValue(values, testName)) {
                 let status = 'normal';
                 if (flag === 'H') status = 'high';
                 else if (flag === 'L') status = 'low';
@@ -2257,12 +2258,12 @@ function extractMemorialHealthValues(text) {
                 let unit = '';
                 if (isPercent) unit = '%';
 
-                values[testName] = {
+                setObjectValue(values, testName, {
                     value: value,
                     unit: unit,
                     range: '',
                     status: status
-                };
+                });
                 console.log(`  ✓ ${testName}: ${value} ${unit} (${status})`);
             }
         }
@@ -2326,7 +2327,7 @@ function extractMemorialHealthValues(text) {
     };
 
     for (const [testName, pattern] of Object.entries(commonTests)) {
-        if (values[testName]) continue; // Already found
+        if (hasObjectValue(values, testName)) continue; // Already found
 
         const match = text.match(pattern);
         if (match) {
@@ -2349,12 +2350,12 @@ function extractMemorialHealthValues(text) {
                     }
                 }
 
-                values[testName] = {
+                setObjectValue(values, testName, {
                     value: value,
                     unit: unit,
                     range: '',
                     status: status
-                };
+                });
                 console.log(`  ✓ ${testName}: ${value} ${unit} (${status}) [Pattern 2]`);
             }
         }
@@ -2456,13 +2457,13 @@ function extractPeriodValues(text, dates) {
                 if (dataPoints.length > 0) {
                     // Get the most recent value for UI compatibility
                     const latestPoint = dataPoints[dataPoints.length - 1];
-                    values[testName] = {
+                    setObjectValue(values, testName, {
                         value: latestPoint.value,
                         unit: unit,
                         range: range,
                         status: latestPoint.status,
                         dataPoints: dataPoints  // Keep all points for charts
-                    };
+                    });
                     console.log(`  ✓ ${testName}: ${dataPoints.length} valores (último: ${latestPoint.value})`);
                 }
             }
@@ -2483,7 +2484,7 @@ function extractPeriodValues(text, dates) {
         const valuesStr = genericMatch[4];
 
         // Skip if already found or is a header/invalid
-        if (values[testName] || !testName || testName.length < 2) continue;
+        if (hasObjectValue(values, testName) || !testName || testName.length < 2) continue;
         const upperName = testName.toUpperCase().trim();
 
         // Skip header words and standalone generic words
@@ -2515,13 +2516,13 @@ function extractPeriodValues(text, dates) {
             if (dataPoints.length > 1) {
                 // Get the most recent value for UI compatibility
                 const latestPoint = dataPoints[dataPoints.length - 1];
-                values[testName] = {
+                setObjectValue(values, testName, {
                     value: latestPoint.value,
                     unit: unit,
                     range: range,
                     status: latestPoint.status,
                     dataPoints: dataPoints  // Keep all points for charts
-                };
+                });
                 console.log(`  ✓ ${testName}: ${dataPoints.length} valores (generic, último: ${latestPoint.value})`);
             }
         }
@@ -2652,11 +2653,11 @@ function extractInBodyValues(text) {
                     unit = 'cm';
                 }
 
-                values[testName] = {
+                setObjectValue(values, testName, {
                     value: numericValue,
                     unit: unit,
                     status: 'normal' // InBody doesn't have H/L markers
-                };
+                });
 
                 console.log(`  ✓ ${testName}: ${numericValue} ${unit}`);
             }
@@ -2695,11 +2696,11 @@ function extractInBodyValues(text) {
             const data = impedanceValues[i];
             const testName = `Impedância ${data.bodyPart} (${frequency})`;
 
-            values[testName] = {
+            setObjectValue(values, testName, {
                 value: data.value,
                 unit: 'Ω',
                 status: 'normal'
-            };
+            });
 
             console.log(`  ✓ ${testName}: ${data.value} Ω`);
         }

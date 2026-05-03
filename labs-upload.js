@@ -1,3 +1,4 @@
+/* global firebaseAuth, firebaseStorage, firebaseDB, pdfjsLib, Tesseract, identifyLabTypeFromFilename, identifyPDFFormat, parsePDF, extractDateFromOCR, extractChartLabValues, scanLabFiles */
 // Labs Upload - Handle file uploads with drag & drop
 // Firebase version - uploads to Cloud Storage and Firestore
 

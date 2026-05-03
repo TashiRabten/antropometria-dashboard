@@ -1,3 +1,4 @@
+/* global storage */
 // Firebase Cloud Storage Module
 // Handles file uploads and downloads for lab PDFs and images
 
