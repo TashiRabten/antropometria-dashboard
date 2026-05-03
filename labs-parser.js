@@ -9,9 +9,55 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.worker.min.js';
 
 // Global lab data
-let allLabs = [];
-let labsData = {};
+var allLabs = [];
+var labsData = {};
 let isScanning = false; // Flag to prevent multiple simultaneous scans
+
+const BLOCKED_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+function isSafeObjectKey(key) {
+    return typeof key === 'string' && key.length > 0 && !BLOCKED_OBJECT_KEYS.has(key);
+}
+
+function hasObjectValue(object, key) {
+    return isSafeObjectKey(key) && Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function getObjectValue(object, key) {
+    if (!hasObjectValue(object, key)) return undefined;
+    return Object.getOwnPropertyDescriptor(object, key)?.value;
+}
+
+function setObjectValue(object, key, value) {
+    if (!isSafeObjectKey(key)) return false;
+    Object.defineProperty(object, key, {
+        value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+    });
+    return true;
+}
+
+function clearChildren(element) {
+    element.replaceChildren();
+}
+
+function appendTextElement(parent, tagName, className, text) {
+    const element = document.createElement(tagName);
+    if (className) element.className = className;
+    element.textContent = text ?? '';
+    parent.appendChild(element);
+    return element;
+}
+
+function appendOption(select, value, label) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    select.appendChild(option);
+    return option;
+}
 
 // Scan lab files from Firestore (Firebase version)
 async function scanLabFiles() {
@@ -640,8 +686,9 @@ function cleanTestName(name) {
     while (prevCleaned !== cleaned) {
         prevCleaned = cleaned;
         for (const hw of headerWords) {
-            const regex = new RegExp(`^${hw}\\s+`, 'i');
-            cleaned = cleaned.replace(regex, '');
+            if (cleaned.toUpperCase().startsWith(`${hw} `)) {
+                cleaned = cleaned.slice(hw.length).trimStart();
+            }
         }
         cleaned = cleaned.trim();
     }
@@ -801,7 +848,7 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
         }
 
         // Skip if already parsed
-        if (values[testName]) {
+        if (hasObjectValue(values, testName)) {
             console.log(`  ⚠️ Skipping "${testName}" - already parsed`);
             continue;
         }
@@ -841,17 +888,17 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
                 .replace(/\s{2,}/g, ' ')
                 .trim();
 
-            if (!values[testName] && !isNaN(value)) {
+            if (!hasObjectValue(values, testName) && !isNaN(value)) {
                 let status = 'normal';
                 if (value < lowRange) status = 'low';
                 else if (value > highRange) status = 'high';
 
-                values[testName] = {
+                setObjectValue(values, testName, {
                     value: value,
                     unit: unit,
                     range: `${lowRange} - ${highRange}`,
                     status: status
-                };
+                });
                 console.log(`  ✓ ${testName}: ${value} ${unit} (visual chart pattern, filtered from ${allNumbers.length} numbers)`);
             }
         } else {
@@ -888,7 +935,7 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
         }
 
         // Skip if this exact test name already exists
-        if (values[testName]) {
+        if (hasObjectValue(values, testName)) {
             console.log(`  ⚠️ Skipping "${testName}" - already parsed`);
             continue;
         }
@@ -977,12 +1024,12 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
             }
 
             if (actualValue !== null && !isNaN(actualValue)) {
-                values[testName] = {
+                setObjectValue(values, testName, {
                     value: actualValue,
                     unit: unit,
                     range: `${lowRange} - ${highRange}`,
                     status: status
-                };
+                });
                 console.log(`  ✓ ${testName}: ${actualValue} ${unit} (${status})`);
             } else {
                 console.log(`  ⚠️ Valor não encontrado para ${testName} (todos eram range values)`);
@@ -1003,15 +1050,15 @@ const visualChartPattern = /(?:^|\n|\t)((?:\d+-)?[A-Za-z][A-Za-z0-9 \-\/\(\),]{2
 
         if (!testName || testName.length < 2) continue;
         if (!isValidTestName(testName)) continue;
-        if (values[testName]) continue;
+        if (hasObjectValue(values, testName)) continue;
 
         if (!isNaN(value)) {
-            values[testName] = {
+            setObjectValue(values, testName, {
                 value: value,
                 unit: '',
                 range: '',
                 status: 'normal'
-            };
+            });
             console.log(`  ✓ ${testName}: ${value} (Value pattern)`);
         }
     }
@@ -1384,12 +1431,12 @@ function extractHealowValues(text) {
             continue;
         }
 
-        values[name] = {
+        setObjectValue(values, name, {
             value: value,
             unit: unit,
             range: range,
             status: abnormal === 'H' ? 'high' : abnormal === 'L' ? 'low' : 'normal'
-        };
+        });
         console.log(`  ✓ ${name}: ${value} ${unit} (${abnormal || 'normal'})`);
     }
 
@@ -1406,12 +1453,13 @@ function extractHealowValues(text) {
     ];
 
     for (const testName of testNames) {
-        if (values[testName]) continue; // Already found
+        if (hasObjectValue(values, testName)) continue; // Already found
 
-        // Look for pattern: TEST_NAME ... VALUE H/L ... RANGE (UNIT)
-        const escapedName = testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const testPattern = new RegExp(escapedName + '\\s+(\\d+\\.?\\d*)\\s*([HL])?\\s+([\\d.\\-<>]+)\\s*\\(([^)]+)\\)', 'i');
-        const testMatch = text.match(testPattern);
+        // Look for pattern after a literal test name: VALUE H/L RANGE (UNIT)
+        const nameIndex = text.toUpperCase().indexOf(testName.toUpperCase());
+        const afterName = nameIndex >= 0 ? text.slice(nameIndex + testName.length) : '';
+        const tailMatch = afterName.match(/^\s+(\d+\.?\d*)\s*([HL])?\s+([\d.\-<>]+)\s*\(([^)]+)\)/i);
+        const testMatch = tailMatch ? ['', ...tailMatch.slice(1)] : null;
 
         if (testMatch) {
             const value = parseFloat(testMatch[1]);
@@ -1419,12 +1467,12 @@ function extractHealowValues(text) {
             const range = testMatch[3];
             const unit = testMatch[4];
 
-            values[testName] = {
+            setObjectValue(values, testName, {
                 value: value,
                 unit: unit,
                 range: range,
                 status: abnormal === 'H' ? 'high' : abnormal === 'L' ? 'low' : 'normal'
-            };
+            });
             console.log(`  ✓ ${testName}: ${value} ${unit} (${abnormal || 'normal'})`);
         }
     }
@@ -2359,31 +2407,15 @@ function extractPeriodValues(text, dates) {
     ];
 
     for (const testName of periodTests) {
-        // Look for test name followed by range then values
-        const escapedName = testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Look for literal test name followed by range then values
+        const testIndex = text.toUpperCase().indexOf(testName.toUpperCase());
+        const afterName = testIndex >= 0 ? text.slice(testIndex + testName.length) : '';
 
         // Pattern 1: TestName  Range (X - Y)  Unit  Values...
         // Example: "Basophils Absolute  0.0 - 0.2 10*3/uL  0.0   0.1   0.1   0.1"
-        const pattern1 = new RegExp(
-            escapedName +
-            '\\s+' +                                    // whitespace
-            '([\\d.]+\\s*-\\s*[\\d.]+)\\s*' +          // range like "0.0 - 0.2"
-            '([A-Za-z\\*\\/\\d%]+)?\\s*' +             // optional unit like "10*3/uL"
-            '([\\d.]+(?:\\s*[HL])?(?:\\s+[\\d.]+(?:\\s*[HL])?)*)',  // values
-            'i'
-        );
-
         // Pattern 2: TestName  Range (<X or >X)  Values...
         // Example: "Chol/HDL Ratio  <5.0  10.9 H   9.5 H"
-        const pattern2 = new RegExp(
-            escapedName +
-            '\\s+' +                                    // whitespace
-            '([<>][\\d.]+)\\s+' +                      // range like "<5.0" or ">40"
-            '([\\d.]+(?:\\s*[HL])?(?:\\s+[\\d.]+(?:\\s*[HL])?)*)',  // values
-            'i'
-        );
-
-        let match = text.match(pattern1);
+        let match = afterName.match(/^\s+([\d.]+\s*-\s*[\d.]+)\s*([A-Za-z*\/\d%]+)?\s*([\d.]+(?:\s*[HL])?(?:\s+[\d.]+(?:\s*[HL])?)*)/i);
         let range = '';
         let unit = '';
         let valuesStr = '';
@@ -2393,7 +2425,7 @@ function extractPeriodValues(text, dates) {
             unit = match[2] || '';
             valuesStr = match[3];
         } else {
-            match = text.match(pattern2);
+            match = afterName.match(/^\s+([<>][\d.]+)\s+([\d.]+(?:\s*[HL])?(?:\s+[\d.]+(?:\s*[HL])?)*)/i);
             if (match) {
                 range = match[1];
                 valuesStr = match[2];
@@ -2824,12 +2856,12 @@ function extractChartLabValues(text, filename) {
                     const flag = lastMatch[2];
 
                     if (!isNaN(value) && value > 0) {
-                        values[test.name] = {
+                        setObjectValue(values, test.name, {
                             value: value,
                             unit: '',
                             range: '',
                             status: flag === 'H' ? 'high' : flag === 'L' ? 'low' : 'normal'
-                        };
+                        });
                         console.log(`  ✓ ${test.name}: ${value} ${flag || ''}`);
                     }
                 }
@@ -2901,20 +2933,15 @@ function updateLabTypeFilter() {
         }
     });
 
-    // Clear existing options except the first ones
-    const staticOptions = `
-        <option value="all">Todos os Exames</option>
-        <option value="period">Exames de Período (2018-2022)</option>
-        <option value="chart">Exames de Gráfico (Imagens)</option>
-    `;
+    clearChildren(filterType);
+    appendOption(filterType, 'all', 'Todos os Exames');
+    appendOption(filterType, 'period', 'Exames de Período (2018-2022)');
+    appendOption(filterType, 'chart', 'Exames de Gráfico (Imagens)');
 
     // Add dynamic options based on found lab types
-    let dynamicOptions = '';
     Array.from(labTypes).sort().forEach(labType => {
-        dynamicOptions += `<option value="${labType}">${labType}</option>`;
+        appendOption(filterType, labType, labType);
     });
-
-    filterType.innerHTML = staticOptions + dynamicOptions;
     console.log(`🔽 Dropdown atualizado com ${labTypes.size} tipos de exames`);
 }
 
@@ -2943,16 +2970,14 @@ function updateChartMarkerFilter() {
     // Sort markers alphabetically
     const sortedMarkers = Array.from(normalizedMarkers.keys()).sort();
 
-    // Build options - use normalized name as both value and label
-    let options = '';
+    clearChildren(chartMarker);
     sortedMarkers.forEach(marker => {
         const originalNames = normalizedMarkers.get(marker);
         const count = originalNames.size > 1 ? ` (${originalNames.size} variantes)` : '';
-        options += `<option value="${marker}">${marker}${count}</option>`;
+        appendOption(chartMarker, marker, `${marker}${count}`);
     });
 
-    if (options) {
-        chartMarker.innerHTML = options;
+    if (sortedMarkers.length > 0) {
         console.log(`📊 Dropdown de marcadores atualizado com ${normalizedMarkers.size} marcadores (normalizados de ${Array.from(normalizedMarkers.values()).reduce((sum, set) => sum + set.size, 0)} originais)`);
     }
 }
@@ -2976,7 +3001,7 @@ function displayLabs(labs) {
         return;
     }
 
-    labsList.innerHTML = '';
+    clearChildren(labsList);
 
     if (labs.length === 0) {
         console.log('⚠️ Nenhum lab para exibir');
@@ -3051,54 +3076,81 @@ function createLabCard(lab) {
 
     const labTypeName = lab.labType || 'Exame';
 
-    col.innerHTML = `
-        <div class="lab-card">
-            ${lab.isPeriodLab ? '<div class="period-indicator">📅 Exame de Período</div>' : ''}
-            <div class="lab-card-header">
-                <div onclick="showLabDetail('${lab.id}')" style="cursor: pointer; flex: 1;">
-                    <h5 class="lab-card-title">
-                        ${labTypeName}
-                    </h5>
-                    <div class="lab-card-date">${dateStr}</div>
-                </div>
-                <div class="d-flex flex-column gap-1">
-                    <span class="lab-badge ${badgeClass}">${formatLabel}</span>
-                    <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteLabFile('${lab.storedFileId || lab.id}');" title="Deletar exame">
-                        🗑️
-                    </button>
-                </div>
-            </div>
-            <div class="lab-card-body" onclick="showLabDetail('${lab.id}')" style="cursor: pointer;">
-                <div class="lab-value-preview">
-                    ${createValuePreview(lab.values)}
-                </div>
-            </div>
-        </div>
-    `;
+    const card = document.createElement('div');
+    card.className = 'lab-card';
+
+    if (lab.isPeriodLab) {
+        appendTextElement(card, 'div', 'period-indicator', '📅 Exame de Período');
+    }
+
+    const header = document.createElement('div');
+    header.className = 'lab-card-header';
+    card.appendChild(header);
+
+    const titleArea = document.createElement('div');
+    titleArea.style.cursor = 'pointer';
+    titleArea.style.flex = '1';
+    titleArea.addEventListener('click', () => showLabDetail(lab.id));
+    header.appendChild(titleArea);
+
+    appendTextElement(titleArea, 'h5', 'lab-card-title', labTypeName);
+    appendTextElement(titleArea, 'div', 'lab-card-date', dateStr);
+
+    const actions = document.createElement('div');
+    actions.className = 'd-flex flex-column gap-1';
+    header.appendChild(actions);
+
+    appendTextElement(actions, 'span', `lab-badge ${badgeClass}`, formatLabel);
+
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'btn btn-sm btn-outline-danger';
+    deleteButton.type = 'button';
+    deleteButton.title = 'Deletar exame';
+    deleteButton.textContent = '🗑️';
+    deleteButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        deleteLabFile(lab.storedFileId || lab.id);
+    });
+    actions.appendChild(deleteButton);
+
+    const body = document.createElement('div');
+    body.className = 'lab-card-body';
+    body.style.cursor = 'pointer';
+    body.addEventListener('click', () => showLabDetail(lab.id));
+    card.appendChild(body);
+
+    const preview = document.createElement('div');
+    preview.className = 'lab-value-preview';
+    appendValuePreview(preview, lab.values);
+    body.appendChild(preview);
+
+    col.appendChild(card);
 
     return col;
 }
 
 // Create value preview tags
-function createValuePreview(values) {
+function appendValuePreview(container, values) {
     const valueKeys = Object.keys(values).slice(0, 4);
-    return valueKeys.map(key => {
-        const val = values[key];
+    valueKeys.forEach(key => {
+        const val = getObjectValue(values, key);
+        if (!val) return;
         const abnormal = val.status && val.status !== 'normal';
+        const tag = document.createElement('span');
+        tag.className = `lab-value-tag ${abnormal ? 'abnormal' : 'normal'}`;
 
         // For period labs with multiple dataPoints, show count
         if (val.dataPoints && val.dataPoints.length > 1) {
             const latestVal = val.dataPoints[val.dataPoints.length - 1];
             const latestAbnormal = latestVal.status && latestVal.status !== 'normal';
-            return `<span class="lab-value-tag ${latestAbnormal ? 'abnormal' : 'normal'}">
-                ${key}: ${latestVal.value} <small>(${val.dataPoints.length}x)</small>
-            </span>`;
+            tag.className = `lab-value-tag ${latestAbnormal ? 'abnormal' : 'normal'}`;
+            tag.append(document.createTextNode(`${key}: ${latestVal.value} `));
+            appendTextElement(tag, 'small', '', `(${val.dataPoints.length}x)`);
+        } else {
+            tag.textContent = `${key}: ${val.value || val.dataPoints?.[0]?.value || '--'}`;
         }
-
-        return `<span class="lab-value-tag ${abnormal ? 'abnormal' : 'normal'}">
-            ${key}: ${val.value || val.dataPoints?.[0]?.value || '--'}
-        </span>`;
-    }).join('');
+        container.appendChild(tag);
+    });
 }
 
 // Show lab detail modal
@@ -3112,11 +3164,20 @@ function showLabDetail(labId) {
     // Load PDF/image viewer using blob URL
     const viewerContainer = document.getElementById('pdf-viewer-container');
     const url = lab.blobUrl || lab.filepath;
+    clearChildren(viewerContainer);
 
     if (lab.filename.endsWith('.pdf')) {
-        viewerContainer.innerHTML = `<iframe src="${url}" width="100%" height="600px"></iframe>`;
+        const frame = document.createElement('iframe');
+        frame.src = url;
+        frame.width = '100%';
+        frame.height = '600';
+        viewerContainer.appendChild(frame);
     } else {
-        viewerContainer.innerHTML = `<img src="${url}" alt="${lab.filename}" class="img-fluid">`;
+        const image = document.createElement('img');
+        image.src = url;
+        image.alt = lab.filename;
+        image.className = 'img-fluid';
+        viewerContainer.appendChild(image);
     }
 
     // Show extracted values
@@ -3130,53 +3191,53 @@ function showLabDetail(labId) {
 // Display extracted values
 function displayExtractedValues(values) {
     const container = document.getElementById('extracted-values');
-    let html = '<table class="table table-sm">';
+    clearChildren(container);
+
+    const table = document.createElement('table');
+    table.className = 'table table-sm';
+    container.appendChild(table);
 
     for (const [name, data] of Object.entries(values)) {
         const abnormal = data.status && data.status !== 'normal';
         const statusClass = data.status || 'normal';
+        const row = document.createElement('tr');
+        table.appendChild(row);
 
         // Check if this has multiple dataPoints (period format)
         if (data.dataPoints && data.dataPoints.length > 1) {
-            // Multi-value row - show all data points
-            html += `
-                <tr class="period-row">
-                    <td class="value-name">
-                        ${name}
-                        <small class="text-muted d-block">${data.range || ''} ${data.unit || ''}</small>
-                    </td>
-                    <td class="text-end">
-                        <div class="datapoints-list">
-                            ${data.dataPoints.map(dp => {
-                                const dpAbnormal = dp.status && dp.status !== 'normal';
-                                const dpStatusClass = dp.status || 'normal';
-                                const dateStr = dp.date ? (dp.date.toDate ? dp.date.toDate() : new Date(dp.date)).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'}) : '';
-                                return `<div class="datapoint-item ${dpAbnormal ? 'abnormal' : ''}">
-                                    <span class="dp-date">${dateStr}</span>
-                                    <span class="dp-value ${dpStatusClass}">${dp.value}</span>
-                                </div>`;
-                            }).join('')}
-                        </div>
-                    </td>
-                </tr>
-            `;
+            row.className = 'period-row';
+            const nameCell = appendTextElement(row, 'td', 'value-name', name);
+            appendTextElement(nameCell, 'small', 'text-muted d-block', `${data.range || ''} ${data.unit || ''}`.trim());
+
+            const valueCell = document.createElement('td');
+            valueCell.className = 'text-end';
+            row.appendChild(valueCell);
+
+            const list = document.createElement('div');
+            list.className = 'datapoints-list';
+            valueCell.appendChild(list);
+
+            data.dataPoints.forEach(dp => {
+                const dpAbnormal = dp.status && dp.status !== 'normal';
+                const dpStatusClass = dp.status || 'normal';
+                const dateStr = dp.date ? (dp.date.toDate ? dp.date.toDate() : new Date(dp.date)).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'}) : '';
+                const item = document.createElement('div');
+                item.className = `datapoint-item ${dpAbnormal ? 'abnormal' : ''}`;
+                appendTextElement(item, 'span', 'dp-date', dateStr);
+                appendTextElement(item, 'span', `dp-value ${dpStatusClass}`, dp.value);
+                list.appendChild(item);
+            });
         } else {
-            // Single value row
-            html += `
-                <tr>
-                    <td class="value-name">${name}</td>
-                    <td class="text-end">
-                        <span class="value-number ${abnormal ? 'abnormal' : ''}">${data.value || '--'}</span>
-                        ${data.unit ? `<small class="text-muted">${data.unit}</small>` : ''}
-                        ${data.status ? `<span class="value-status ${statusClass}">${statusClass}</span>` : ''}
-                    </td>
-                </tr>
-            `;
+            appendTextElement(row, 'td', 'value-name', name);
+            const valueCell = document.createElement('td');
+            valueCell.className = 'text-end';
+            row.appendChild(valueCell);
+
+            appendTextElement(valueCell, 'span', `value-number ${abnormal ? 'abnormal' : ''}`, data.value || '--');
+            if (data.unit) appendTextElement(valueCell, 'small', 'text-muted', data.unit);
+            if (data.status) appendTextElement(valueCell, 'span', `value-status ${statusClass}`, statusClass);
         }
     }
-
-    html += '</table>';
-    container.innerHTML = html;
 }
 
 // Filter labs

@@ -300,8 +300,9 @@ function prepareChartData(marker, timerange) {
 
         // First try exact match
         for (const alias of aliases) {
-            if (lab.values[alias]) {
-                markerData = lab.values[alias];
+            const value = getObjectValue(lab.values, alias);
+            if (value) {
+                markerData = value;
                 foundAlias = alias;
                 break;
             }
@@ -314,7 +315,7 @@ function prepareChartData(marker, timerange) {
                 const aliasLower = alias.toLowerCase();
                 const matchingKey = labValueKeys.find(k => k.toLowerCase() === aliasLower);
                 if (matchingKey) {
-                    markerData = lab.values[matchingKey];
+                    markerData = getObjectValue(lab.values, matchingKey);
                     foundAlias = matchingKey;
                     break;
                 }
@@ -504,8 +505,9 @@ function prepareComparisonData() {
 
             // First try exact match
             for (const alias of aliases) {
-                if (lab.values[alias]) {
-                    markerData = lab.values[alias];
+                const value = getObjectValue(lab.values, alias);
+                if (value) {
+                    markerData = value;
                     break;
                 }
             }
@@ -517,7 +519,7 @@ function prepareComparisonData() {
                     const aliasLower = alias.toLowerCase();
                     const matchingKey = labValueKeys.find(k => k.toLowerCase() === aliasLower);
                     if (matchingKey) {
-                        markerData = lab.values[matchingKey];
+                        markerData = getObjectValue(lab.values, matchingKey);
                         break;
                     }
                 }
