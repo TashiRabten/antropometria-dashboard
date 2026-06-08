@@ -1,5 +1,5 @@
 {
-  "last_update": ["2026-05-17 06:52:05"],
+  "last_update": ["2026-06-08 07:31:48"],
   "current_weight": [72.8],
   "current_imc": [23],
   "current_braco": [32],
@@ -10,15 +10,15 @@
   "progress_to_goal": [0.2],
   "sections": {
     "duthanga_geral": {
-      "records": [63],
+      "records": [64],
       "latest_date": ["2026-05-16"]
     },
     "duthanga_refeicao": {
-      "records": [33],
+      "records": [34],
       "latest_date": ["2026-05-16"]
     },
     "ganho_peso": {
-      "records": [18],
+      "records": [19],
       "latest_date": ["2026-05-16"]
     }
   }
