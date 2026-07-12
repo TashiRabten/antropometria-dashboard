@@ -1,25 +1,25 @@
 {
-  "last_update": ["2026-06-29 05:26:02"],
-  "current_weight": [71.6],
-  "current_imc": [22.6],
-  "current_braco": [31],
-  "current_cintura": [87.5],
-  "current_quadril": [92.5],
+  "last_update": ["2026-07-12 15:32:05"],
+  "current_weight": [71],
+  "current_imc": [22.4],
+  "current_braco": [32.5],
+  "current_cintura": [86.5],
+  "current_quadril": [91.5],
   "current_panturrilha": [33],
   "goal_weight": [73],
-  "progress_to_goal": [1.4],
+  "progress_to_goal": [2],
   "sections": {
     "duthanga_geral": {
-      "records": [65],
-      "latest_date": ["2026-06-28"]
+      "records": [66],
+      "latest_date": ["2026-07-12"]
     },
     "duthanga_refeicao": {
-      "records": [35],
-      "latest_date": ["2026-06-28"]
+      "records": [36],
+      "latest_date": ["2026-07-12"]
     },
     "ganho_peso": {
-      "records": [20],
-      "latest_date": ["2026-06-28"]
+      "records": [21],
+      "latest_date": ["2026-07-12"]
     }
   }
 }
