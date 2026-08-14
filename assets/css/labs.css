@@ -545,3 +545,38 @@
     color: var(--dark-color);
     font-weight: 500;
 }
+
+/* Marker language toggle (PT default / EN shows the original names from the PDF) */
+.lang-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 0.25rem;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #667eea;
+    background: #fff;
+    border: 1px solid #667eea;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.lang-toggle:hover {
+    color: #fff;
+    background: #667eea;
+}
+
+.lang-toggle:focus-visible {
+    outline: 2px solid #764ba2;
+    outline-offset: 2px;
+}
+
+/* pressed = showing the original English names */
+.lang-toggle[aria-pressed="true"] {
+    color: #fff;
+    background: #764ba2;
+    border-color: #764ba2;
+}

@@ -60,6 +60,98 @@ function appendOption(select, value, label) {
     return option;
 }
 
+// ---------------------------------------------------------------------------
+// Marker display language
+//
+// The PDFs come from US labs, so extracted marker names are English and the
+// spelling varies per provider ("BLOOD UREA NITROGEN", "BUN",
+// "Blood Urea Nitrogen (BUN)" are all the same test). The charts already fold
+// those variants into a single Portuguese canonical name through
+// normalizeMarkerName() / markerAliases in labs-charts.js.
+//
+// The list and detail views reuse that exact mapping, so both views always agree
+// on what a marker is called. Portuguese is the default; toggling shows the
+// original English names as extracted from the PDF.
+// ---------------------------------------------------------------------------
+const MARKER_LANGUAGE_KEY = 'labsMarkerLanguage';
+const STATUS_LABELS_PT = { normal: 'normal', high: 'alto', low: 'baixo' };
+
+let markerLanguage = 'pt';
+try {
+    if (localStorage.getItem(MARKER_LANGUAGE_KEY) === 'en') {
+        markerLanguage = 'en';
+    }
+} catch (error) {
+    console.warn('⚠️ localStorage indisponível, usando português por padrão', error);
+}
+
+// Track the open detail modal so a language switch can re-render it in place
+let lastShownLabId = null;
+
+// Canonical Portuguese name for a raw marker key, via the charts' alias table.
+// Falls back to the raw name when no alias exists.
+function displayMarkerName(rawName) {
+    if (markerLanguage === 'en') return rawName;
+    if (typeof normalizeMarkerName === 'function') {
+        try {
+            return normalizeMarkerName(rawName);
+        } catch (error) {
+            console.warn(`⚠️ normalizeMarkerName falhou para "${rawName}"`, error);
+        }
+    }
+    return rawName;
+}
+
+function displayStatusLabel(status) {
+    if (!status) return '';
+    if (markerLanguage === 'en') return status;
+    return getObjectValue(STATUS_LABELS_PT, status) || status;
+}
+
+function updateLanguageToggleUI() {
+    const button = document.getElementById('lang-toggle');
+    const label = document.getElementById('lang-toggle-label');
+    if (!button || !label) return;
+
+    const isPortuguese = markerLanguage === 'pt';
+    label.textContent = isPortuguese ? '🇧🇷 PT' : '🇺🇸 EN';
+    button.title = isPortuguese
+        ? 'Marcadores em português — clique para ver os nomes originais em inglês'
+        : 'Showing original English names — click to switch back to Portuguese';
+    button.setAttribute('aria-pressed', String(!isPortuguese));
+}
+
+function toggleMarkerLanguage() {
+    markerLanguage = markerLanguage === 'pt' ? 'en' : 'pt';
+
+    try {
+        localStorage.setItem(MARKER_LANGUAGE_KEY, markerLanguage);
+    } catch (error) {
+        console.warn('⚠️ Não foi possível salvar a preferência de idioma', error);
+    }
+
+    updateLanguageToggleUI();
+
+    // Re-render through the normal path so the active filters and sort are kept
+    if (typeof filterLabs === 'function' && document.getElementById('filter-type')) {
+        filterLabs();
+    } else {
+        displayLabs(allLabs);
+    }
+
+    // Keep an open detail modal in sync with the new language
+    if (lastShownLabId) {
+        const lab = allLabs.find(item => item.id === lastShownLabId);
+        if (lab) displayExtractedValues(lab.values);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateLanguageToggleUI);
+} else {
+    updateLanguageToggleUI();
+}
+
 // Scan lab files from Firestore (Firebase version)
 async function scanLabFiles() {
     // Prevent multiple simultaneous scans
@@ -3178,14 +3270,16 @@ function appendValuePreview(container, values) {
         tag.className = `lab-value-tag ${abnormal ? 'abnormal' : 'normal'}`;
 
         // For period labs with multiple dataPoints, show count
+        const label = displayMarkerName(key);
+
         if (val.dataPoints && val.dataPoints.length > 1) {
             const latestVal = val.dataPoints[val.dataPoints.length - 1];
             const latestAbnormal = latestVal.status && latestVal.status !== 'normal';
             tag.className = `lab-value-tag ${latestAbnormal ? 'abnormal' : 'normal'}`;
-            tag.append(document.createTextNode(`${key}: ${latestVal.value} `));
+            tag.append(document.createTextNode(`${label}: ${latestVal.value} `));
             appendTextElement(tag, 'small', '', `(${val.dataPoints.length}x)`);
         } else {
-            tag.textContent = `${key}: ${val.value || val.dataPoints?.[0]?.value || '--'}`;
+            tag.textContent = `${label}: ${val.value || val.dataPoints?.[0]?.value || '--'}`;
         }
         container.appendChild(tag);
     });
@@ -3195,6 +3289,9 @@ function appendValuePreview(container, values) {
 function showLabDetail(labId) {
     const lab = allLabs.find(l => l.id === labId);
     if (!lab) return;
+
+    // Remember which lab is open so a language toggle can re-render it
+    lastShownLabId = labId;
 
     // Set modal title
     document.getElementById('labModalTitle').textContent = `${lab.labType || 'Lab'} - ${lab.filename}`;
@@ -3244,7 +3341,7 @@ function displayExtractedValues(values) {
         // Check if this has multiple dataPoints (period format)
         if (data.dataPoints && data.dataPoints.length > 1) {
             row.className = 'period-row';
-            const nameCell = appendTextElement(row, 'td', 'value-name', name);
+            const nameCell = appendTextElement(row, 'td', 'value-name', displayMarkerName(name));
             appendTextElement(nameCell, 'small', 'text-muted d-block', `${data.range || ''} ${data.unit || ''}`.trim());
 
             const valueCell = document.createElement('td');
@@ -3266,14 +3363,14 @@ function displayExtractedValues(values) {
                 list.appendChild(item);
             });
         } else {
-            appendTextElement(row, 'td', 'value-name', name);
+            appendTextElement(row, 'td', 'value-name', displayMarkerName(name));
             const valueCell = document.createElement('td');
             valueCell.className = 'text-end';
             row.appendChild(valueCell);
 
             appendTextElement(valueCell, 'span', `value-number ${abnormal ? 'abnormal' : ''}`, data.value || '--');
             if (data.unit) appendTextElement(valueCell, 'small', 'text-muted', data.unit);
-            if (data.status) appendTextElement(valueCell, 'span', `value-status ${statusClass}`, statusClass);
+            if (data.status) appendTextElement(valueCell, 'span', `value-status ${statusClass}`, displayStatusLabel(data.status));
         }
     }
 }

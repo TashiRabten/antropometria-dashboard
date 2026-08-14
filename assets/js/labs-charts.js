@@ -85,7 +85,7 @@ const markerAliases = {
     // Iron
     'Ferro': ['Iron', 'Ferro', 'Fe', 'Serum Iron', 'IRON', 'Iron, Total'],
     'Ferritina': ['Ferritin', 'Ferritina', 'FERRITIN'],
-    'TIBC': ['TIBC', 'Total Iron Binding Capacity', 'Capacidade de Ligação', 'TOTAL IRON BINDING CAPACITY'],
+    'TIBC': ['TIBC', 'Total Iron Binding Capacity', 'Capacidade de Ligação', 'TOTAL IRON BINDING CAPACITY', 'Total Iron Binding Capacity (TIBC)'],
     'Transferrina': ['Transferrin', 'TRANSFERRIN', 'Transferrina'],
     'Saturação de Ferro': ['Iron Saturation', 'Unbound Iron Binding Capacity (IBC) Iron Saturation', 'Saturação de Ferro', '% TRANSFERRIN SATURATION', 'TRANSFERRIN SATURATION', 'Transferrin Saturation'],
 
