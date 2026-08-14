@@ -54,7 +54,7 @@ No seu repositório GitHub, vá em Settings > Secrets and variables > Actions e 
 
 ### 5. Ajustar Configurações
 
-No arquivo `generate_charts.R`, ajuste:
+No arquivo `scripts/generate_charts.R`, ajuste:
 
 - `altura_m`: Sua altura em metros para cálculo correto do IMC
 - `sheet_url`: URL da sua planilha Google Sheets (se diferente)
@@ -88,7 +88,7 @@ O site é totalmente responsivo e funciona bem em:
 
 Você pode personalizar:
 - Cores e temas no arquivo `index.html`
-- Tipos de gráficos no arquivo `generate_charts.R`
+- Tipos de gráficos no arquivo `scripts/generate_charts.R`
 - Frequência de atualização no arquivo `.github/workflows/update-charts.yml`
 
 ---

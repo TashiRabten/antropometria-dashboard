@@ -21,11 +21,11 @@ const markerAliases = {
     'VPM': ['MPV', 'Mean Platelet Volume', 'VPM'],
 
     // Blood counts - Differential (Relative %)
-    'Neutrófilos': ['Neutrophils', 'Neutrophils Relative', 'Neutrófilos'],
-    'Linfócitos': ['Lymphocytes', 'Lymphocytes Relative', 'Linfócitos'],
-    'Monócitos': ['Monocytes', 'Monocytes Relative', 'Monócitos'],
-    'Eosinófilos': ['Eosinophils', 'Eosinophils Relative', 'Eosinófilos'],
-    'Basófilos': ['Basophils', 'Basophils Relative', 'Basófilos'],
+    'Neutrófilos': ['Neutrophils', 'Neutrophils Relative', 'Neutrófilos', '% NEUTROPHIL - AUTOMATED COUNT'],
+    'Linfócitos': ['Lymphocytes', 'Lymphocytes Relative', 'Linfócitos', '% LYMPHOCYTE - AUTOMATED COUNT'],
+    'Monócitos': ['Monocytes', 'Monocytes Relative', 'Monócitos', '% MONOCYTE - AUTOMATED COUNT'],
+    'Eosinófilos': ['Eosinophils', 'Eosinophils Relative', 'Eosinófilos', '% EOSINOPHIL - AUTOMATED COUNT'],
+    'Basófilos': ['Basophils', 'Basophils Relative', 'Basófilos', '% BASOPHIL - AUTOMATED COUNT'],
 
     // Blood counts - Differential (Absolute)
     'Neutrófilos Absolutos': ['Neutrophils Absolute', 'Absolute neutrophils', 'Abs. Neutrophil', 'ABSOLUTE NEUTROPHIL - AUTOMATED COUNT', 'Neutrófilos Absolutos'],
@@ -33,9 +33,11 @@ const markerAliases = {
     'Monócitos Absolutos': ['Monocytes Absolute', 'Absolute monocytes', 'Abs. Monocyte', 'ABSOLUTE MONOCYTE - AUTOMATED COUNT', 'Monócitos Absolutos'],
     'Eosinófilos Absolutos': ['Eosinophils Absolute', 'Absolute eosinophils', 'ABSOLUTE EOSINOPHIL - AUTOMATED COUNT', 'Eosinófilos Absolutos'],
     'Basófilos Absolutos': ['Basophils Absolute', 'Absolute basophils', 'Abs. Basophil', 'ABSOLUTE BASOPHIL - AUTOMATED COUNT', 'Basófilos Absolutos'],
-    'Granulócitos Imaturos': ['Immature Granulocytes', 'Absolute Immature Granulocytes', 'Absolute Immature', 'Granulócitos Imaturos'],
+    'Granulócitos Imaturos': ['Immature Granulocytes', 'Absolute Immature Granulocytes', 'Absolute Immature', 'Granulócitos Imaturos', 'ABSOLUTE IMMATURE GRANULOCYTES'],
+    // kept separate from the absolute count above so both can be charted
+    'Granulócitos Imaturos %': ['% IMMATURE GRANULOCYTES', 'Immature Granulocytes Relative', 'Granulócitos Imaturos %'],
     'Fração Plaquetas Imaturas': ['Immature Platelet Fraction', 'Abs. Immature Platelet Fraction', 'Fração Plaquetas Imaturas'],
-    'Hemácias Nucleadas': ['Nucleated RBCS', 'Nucleated RBCs', 'Hemácias Nucleadas'],
+    'Hemácias Nucleadas': ['Nucleated RBCS', 'Nucleated RBCs', 'Hemácias Nucleadas', "NUCLEATED RBC'S - AUTOMATED COUNT", 'NUCLEATED RBCS - AUTOMATED COUNT'],
 
     // Metabolic panel
     'Glicose': ['Glucose', 'Glicose', 'Blood Glucose', 'Fasting Glucose', 'GLUCOSE'],
@@ -48,7 +50,8 @@ const markerAliases = {
     'Cálcio': ['Calcium', 'Ca', 'Cálcio', 'CALCIUM'],
     'Ânion Gap': ['Anion Gap', 'Anion gap', 'ANION GAP', 'Ânion Gap'],
     'Relação BUN/Creatinina': ['BUN/Creatinine Ratio', 'BUN/Creat Ratio', 'Relação BUN/Creatinina'],
-    'eGFR': ['eGFR', 'Estimated GFR', 'GFR'],
+    // the "RATE, CKD-" variant is a wrapped line that loses its "EPI" suffix
+    'eGFR': ['eGFR', 'Estimated GFR', 'GFR', 'ESTIMATED GLOMERULAR FILTRATION', 'Estimated Glomerular Filtration', 'ESTIMATED GLOMERULAR FILTRATION RATE, CKD-EPI', 'ESTIMATED GLOMERULAR FILTRATION RATE, CKD-'],
 
     // Liver
     'AST': ['AST', 'SGOT', 'AST (SGOT)', 'Aspartate Aminotransferase'],
@@ -56,6 +59,7 @@ const markerAliases = {
     'Bilirrubina Total': ['Total Bilirubin', 'Bilirubin', 'Bilirrubina Total', 'Bilirrubina', 'BILIRUBIN, TOTAL', 'Bilirubin, Total', 'Bilirubin (total)'],
     'Bilirrubina Direta': ['Bilirubin (direct)', 'Direct Bilirubin', 'Bilirrubina Direta'],
     'Fosfatase Alcalina': ['Alkaline Phosphatase', 'ALP', 'Alk Phos', 'Alk phos', 'ALK PHOS', 'Fosfatase Alcalina'],
+    'Gama GT': ['GGT', 'GGTP', 'Gamma GT', 'GAMMA GT', 'Gama GT', 'GAMMA GLUTAMYL TRANSPEP', 'Gamma Glutamyl Transpeptidase', 'Gamma-Glutamyl Transferase'],
 
     // Proteins
     'Proteína Total': ['Total Protein', 'Proteína Total', 'Protein', 'TOTAL PROTEIN', 'Total protein'],
@@ -65,16 +69,16 @@ const markerAliases = {
     'Pré-albumina': ['Prealbumin', 'PREALBUMIN', 'Pré-albumina', 'Prealbumina'],
 
     // Lipids
-    'Colesterol Total': ['Total Cholesterol', 'Cholesterol', 'Colesterol Total', 'Colesterol', 'CHOLESTEROL', 'TOTAL CHOLESTEROL'],
+    'Colesterol Total': ['Total Cholesterol', 'Cholesterol', 'Colesterol Total', 'Colesterol', 'CHOLESTEROL', 'TOTAL CHOLESTEROL', 'CHOLESTEROL, SERUM OR PLASMA'],
     'HDL': ['HDL', 'HDL Cholesterol', 'HDL-C', 'HDL CHOLESTEROL'],
     'LDL': ['LDL', 'LDL Cholesterol', 'LDL-C', 'LDL Calculated', 'LDL CHOLESTEROL', 'LDL CALCULATED', 'LDL, CALCULATED', 'LDL CHOLESTEROL, DIRECT', 'Calculated LDL'],
     'VLDL': ['VLDL', 'VLDL Cholesterol', 'VLDL Cholesterol Calculated', 'VLDL, CALCULATED', 'VLDL-C', 'Calculated VLDL2'],
-    'Triglicerídeos': ['Triglycerides', 'Triglicerídeos', 'TG', 'Trig', 'TRIGLYCERIDES', 'TRIGLYCERIDE'],
+    'Triglicerídeos': ['Triglycerides', 'Triglicerídeos', 'TG', 'Trig', 'TRIGLYCERIDES', 'TRIGLYCERIDE', 'TRIGLYCERIDES, SERUM OR PLASMA'],
     'Colesterol não-HDL': ['Non HDL Cholesterol', 'Non-HDL Cholesterol', 'Colesterol não-HDL'],
     'Relação Colesterol/HDL': ['Chol/HDL Ratio', 'Chol/HDL ratio', 'Cholesterol/HDL Ratio', 'Calculated LDL/HDL ratio', 'Relação Colesterol/HDL'],
 
     // Thyroid
-    'TSH': ['TSH', 'Thyroid Stimulating Hormone', 'TSH Ultrassensível', 'TSH Ultrasensitive', 'Ultra TSH'],
+    'TSH': ['TSH', 'Thyroid Stimulating Hormone', 'TSH Ultrassensível', 'TSH Ultrasensitive', 'Ultra TSH', 'TSH W/FT4 REFLEX', 'TSH W/ FT4 REFLEX', 'TSH W/FT4 Reflex'],
     'T3 Livre': ['Free T3', 'T3 Free', 'T3 Livre', 'FT3', 'T3 (Triiodothyronine), Free'],
     'T4 Livre': ['Free T4', 'T4 Free', 'T4 Livre', 'FT4', 'Thyroxine Free', 'T4 (Thyroxine), Free'],
 
@@ -83,7 +87,7 @@ const markerAliases = {
     'Ferritina': ['Ferritin', 'Ferritina', 'FERRITIN'],
     'TIBC': ['TIBC', 'Total Iron Binding Capacity', 'Capacidade de Ligação', 'TOTAL IRON BINDING CAPACITY'],
     'Transferrina': ['Transferrin', 'TRANSFERRIN', 'Transferrina'],
-    'Saturação de Ferro': ['Iron Saturation', 'Unbound Iron Binding Capacity (IBC) Iron Saturation', 'Saturação de Ferro'],
+    'Saturação de Ferro': ['Iron Saturation', 'Unbound Iron Binding Capacity (IBC) Iron Saturation', 'Saturação de Ferro', '% TRANSFERRIN SATURATION', 'TRANSFERRIN SATURATION', 'Transferrin Saturation'],
 
     // Vitamins
     'Vitamina D': ['Vitamin D', 'Vitamina D', '25-OH Vitamin D', '25-Hydroxyvitamin D', 'Vit D', 'Vitamin D, 25 hydroxy', 'VITAMIN D, 25 HYDROXY', '25-OH Vitamin D, Total', 'VITAMIN D (25OH)'],

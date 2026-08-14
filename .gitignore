@@ -1,6 +1,23 @@
+# Medical records — never publish these
 Labs/
-.claude/
+private/
 
-# API keys and credentials — gitignored, use *.template.js as reference
-firebase-config.js
-labs-auth.js
+# Setup docs — contain live credentials (Firebase account password, etc.)
+docs/
+
+# Local development: parser test harness, debug pages, one-off tooling
+dev/
+
+# Editor / tooling
+.claude/
+.vscode/
+__pycache__/
+*.pyc
+
+# Credentials.
+# assets/js/firebase-config.js stays tracked on purpose: labs.html loads it from
+# the deployed site, so removing it would 404 and break login. Firebase web API
+# keys are public by design — access is controlled by Firebase Auth plus the
+# Firestore/Storage security rules, not by hiding this file.
+# labs-auth.js is the old client-side password list and is NOT deployed.
+assets/js/labs-auth.js

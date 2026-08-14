@@ -39,7 +39,8 @@ jobs:
         echo '${{ secrets.GOOGLE_SHEETS_TOKEN }}' > auth_token.json
 
     - name: Generate charts
-      run: source("generate_charts.R")
+      # run from the repo root so the script's relative "charts/..." writes still land correctly
+      run: source("scripts/generate_charts.R")
       shell: Rscript {0}
 
     - name: Update HTML with latest data

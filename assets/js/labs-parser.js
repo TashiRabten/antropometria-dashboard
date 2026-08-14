@@ -188,12 +188,16 @@ function cleanLabType(labType) {
     if (lower.includes('thiamine') || lower === 'b1' || lower === 'b-1') return 'B1';
 
     // Other tests
+    if (lower.includes('gamma gt') || lower.includes('gamma glutamyl') || lower === 'ggt') return 'Gama GT';
     if (lower.includes('ferritin')) return 'Ferritina';
     if (lower.includes('folate')) return 'Folato';
     if (lower.includes('c-reactive') || lower.includes('hscrp') || lower === 'crp') return 'PCR';
     if (lower.includes('hemoglobin a1c') || lower.includes('a1c')) return 'A1C';
 
     // Thyroid tests - specific before generic
+    // "TSH W REFLEX FREE T4" is a TSH order, so it has to be matched before the
+    // generic t4+free rule below (which used to label it "T4 Livre").
+    if (lower.includes('tsh') && lower.includes('reflex')) return 'TSH com Reflexo T4 Livre';
     if (lower.includes('t3') && lower.includes('free')) return 'T3 Livre';
     if (lower.includes('t4') && lower.includes('free')) return 'T4 Livre';
     if (lower.includes('tsh') && lower.includes('ultrasensitive')) return 'TSH Ultrassensível';
@@ -236,7 +240,9 @@ function identifyLabTypeFromFilename(filename) {
     if (nameLower.includes('vitamin_c') || nameLower.includes('vitamin c') || nameLower.includes('vit c')) {
         return 'Vitamina C';
     }
-    if (nameLower.includes('vitamin_d') || nameLower.includes('vitamin d') || nameLower.includes('vit d')) {
+    // 'vitamind' covers names with no separator at all, e.g. "VitaminD(8).pdf"
+    if (nameLower.includes('vitamin_d') || nameLower.includes('vitamin d') ||
+        nameLower.includes('vitamind') || nameLower.includes('vit d')) {
         return 'Vitamina D';
     }
 
@@ -278,6 +284,10 @@ function identifyLabTypeFromFilename(filename) {
     }
 
     // Other specific tests
+    if (nameLower.includes('gammagt') || nameLower.includes('gamma gt') ||
+        nameLower.includes('gamma-gt') || nameLower.includes('ggt')) {
+        return 'Gama GT';
+    }
     if (nameLower.includes('ferritin') || nameLower.includes('ferretin')) {
         return 'Ferritina';
     }
@@ -748,6 +758,10 @@ function isValidTestName(name) {
 
     // Skip if it's just numbers
     if (/^[\d.\s]+$/.test(name)) return false;
+
+    // Real tests whose names begin with a word that is also a junk word.
+    // "BLOOD UREA NITROGEN" was being dropped by the "blood " prefix rule below.
+    if (/^blood urea nitrogen\b/i.test(name)) return true;
 
     // Skip common junk words (exact match)
     const junkWords = ['results', 'value', 'lab', 'tests', 'blood', 'venous', 'serum',
@@ -1416,14 +1430,37 @@ function extractHealowValues(text) {
     // "F         HIGH SENSITIVE CRP                                     0.5                                See below (MG/L)"
 
     // Pattern 1: F + TestName (may have parentheses) + Value + H/L + Range + (Unit)
-    const pattern1 = /F\s+([A-Z][A-Z0-9\s,\-\(\)]+?)\s+([\d.]+)\s*([HL])?\s+([\d.\-<>]+)\s*\(([^)]+)\)/gi;
+    //
+    // The name class also allows '%', '/' and apostrophes, and the reference range
+    // is optional, so the Central Counties / eClinicalWorks rows all match:
+    //   "F % NEUTROPHIL - AUTOMATED COUNT   61.1    (%)"        -> no range printed
+    //   "F % TRANSFERRIN SATURATION        20   20-50 (%)"      -> leading '%'
+    //   "F NUCLEATED RBC'S - AUTOMATED COUNT 0.0  0.0-0.5 (/100)" -> apostrophe
+    //   "F TSH W/FT4 REFLEX                1.68 0.35-4.00 (MCIU/ML)" -> slash
+    // '=' is allowed in the range so open-ended ranges like ">=60" (eGFR) match.
+    //
+    // Separators use [^\S\r\n] (horizontal whitespace only) rather than \s so a row
+    // can never span a line break. The regex is case-insensitive, so a plain \s let
+    // "F METHOD  Automated Differential" swallow the row below it and emit a bogus
+    // "METHOD" marker. [^\S\r\n] still matches the NBSP that some of these PDFs put
+    // in front of the unit ("0.22-4.88\u00A0(nmol/L)"), which a literal [ \t] would miss.
+    const pattern1 = /F[^\S\r\n]+([A-Z%][A-Z0-9%'\/,\-\(\) \t\u00A0]*?)[^\S\r\n]+([\d.]+)[^\S\r\n]*([HL])?(?:[^\S\r\n]+([\d.<>=\-]+))?[^\S\r\n]*\(([^)]+)\)/gi;
 
     let match;
     while ((match = pattern1.exec(text)) !== null) {
         let name = cleanTestName(match[1]);
+
+        // cleanTestName() strips a leading "% " because it treats % as a stray unit
+        // prefix. On differential rows that % is the only thing separating the
+        // relative count ("% NEUTROPHIL - AUTOMATED COUNT") from the absolute one
+        // ("ABSOLUTE NEUTROPHIL - AUTOMATED COUNT"), so put it back.
+        if (/^\s*%/.test(match[1]) && name && !name.startsWith('%')) {
+            name = `% ${name}`;
+        }
+
         const value = parseFloat(match[2]);
         const abnormal = match[3];
-        const range = match[4];
+        const range = match[4] || '';
         const unit = match[5];
 
         // Validate the test name
