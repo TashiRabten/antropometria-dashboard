@@ -1,5 +1,7 @@
-/* global Chart, allLabs, getObjectValue */
+/* global Chart, allLabs, getObjectValue, t, displayCanonicalMarker, dateLocale */
 // Lab Charts - Chart.js visualizations for lab trends
+// Language helpers (t, displayCanonicalMarker, dateLocale) come from labs-parser.js,
+// which labs.html loads first.
 
 let trendChart = null;
 let comparisonChart = null;
@@ -216,7 +218,8 @@ function initializeTrendChart() {
         data: {
             labels: data.labels,
             datasets: [{
-                label: `Níveis de ${marker}`,
+                label: t(`Níveis de ${displayCanonicalMarker(marker)}`,
+                         `${displayCanonicalMarker(marker)} levels`),
                 data: data.values,
                 borderColor: '#667eea',
                 backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -239,7 +242,8 @@ function initializeTrendChart() {
                 },
                 title: {
                     display: true,
-                    text: `Tendência de ${marker} ao Longo do Tempo`,
+                    text: t(`Tendência de ${displayCanonicalMarker(marker)} ao Longo do Tempo`,
+                            `${displayCanonicalMarker(marker)} Trend Over Time`),
                     font: {
                         size: 16,
                         weight: 'bold'
@@ -268,7 +272,7 @@ function initializeTrendChart() {
                     beginAtZero: false,
                     title: {
                         display: true,
-                        text: data.unit || marker
+                        text: data.unit || displayCanonicalMarker(marker)
                     },
                     grid: {
                         color: 'rgba(0, 0, 0, 0.05)'
@@ -277,7 +281,7 @@ function initializeTrendChart() {
                 x: {
                     title: {
                         display: true,
-                        text: 'Data'
+                        text: t('Data', 'Date')
                     },
                     grid: {
                         display: false
@@ -388,7 +392,7 @@ function prepareChartData(marker, timerange) {
     filteredPoints.sort((a, b) => a.date - b.date);
 
     // Prepare chart data
-    const labels = filteredPoints.map(dp => dp.date.toLocaleDateString('pt-BR'));
+    const labels = filteredPoints.map(dp => dp.date.toLocaleDateString(dateLocale()));
     const values = filteredPoints.map(dp => dp.value);
     const statuses = filteredPoints.map(dp => dp.status);
     const colors = filteredPoints.map(dp => {
@@ -420,14 +424,14 @@ function initializeComparisonChart() {
             labels: comparisonData.labels,
             datasets: [
                 {
-                    label: 'Média Pré-Dieta (2018-2022)',
+                    label: t('Média Pré-Dieta (2018-2022)', 'Pre-Diet Average (2018-2022)'),
                     data: comparisonData.preDiet,
                     backgroundColor: 'rgba(102, 126, 234, 0.6)',
                     borderColor: '#667eea',
                     borderWidth: 2
                 },
                 {
-                    label: 'Média Pós-Dieta (2023-2025)',
+                    label: t('Média Pós-Dieta (2023-2025)', 'Post-Diet Average (2023-2025)'),
                     data: comparisonData.postDiet,
                     backgroundColor: 'rgba(76, 175, 80, 0.6)',
                     borderColor: '#4CAF50',
@@ -445,7 +449,7 @@ function initializeComparisonChart() {
                 },
                 title: {
                     display: true,
-                    text: 'Comparação Pré-Dieta vs Pós-Dieta',
+                    text: t('Comparação Pré-Dieta vs Pós-Dieta', 'Pre-Diet vs Post-Diet Comparison'),
                     font: {
                         size: 16,
                         weight: 'bold'

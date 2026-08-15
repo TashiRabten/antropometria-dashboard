@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -84,11 +84,11 @@
         <div class="row">
             <div class="col-md-12">
                 <div class="hero-card text-center">
-                    <h1>🔬 Dashboard de Exames Laboratoriais</h1>
+                    <h1 data-i18n-en="🔬 Laboratory Results Dashboard">🔬 Dashboard de Exames Laboratoriais</h1>
                     <div class="zen-quote">
                         "Corpo e mente são interdependentes"
                     </div>
-                    <p class="lead">Acompanhe e analise resultados de exames de saúde ao longo do tempo</p>
+                    <p class="lead" data-i18n-en="Track and analyse health lab results over time">Acompanhe e analise resultados de exames de saúde ao longo do tempo</p>
                 </div>
             </div>
         </div>
@@ -98,7 +98,7 @@
             <div class="col-md-3">
                 <div class="metric-card text-center">
                     <div class="metric-icon">📄</div>
-                    <h5>Total de Exames</h5>
+                    <h5 data-i18n-en="Total Labs">Total de Exames</h5>
                     <h3 id="total-labs">0</h3>
                     <p class="text-muted">arquivos</p>
                 </div>
@@ -106,7 +106,7 @@
             <div class="col-md-3">
                 <div class="metric-card text-center">
                     <div class="metric-icon">📅</div>
-                    <h5>Último Exame</h5>
+                    <h5 data-i18n-en="Latest Lab">Último Exame</h5>
                     <h3 id="latest-lab-date">--</h3>
                     <p class="text-muted">data</p>
                 </div>
@@ -114,7 +114,7 @@
             <div class="col-md-3">
                 <div class="metric-card text-center">
                     <div class="metric-icon">⏱️</div>
-                    <h5>Exames de Período</h5>
+                    <h5 data-i18n-en="Period Labs">Exames de Período</h5>
                     <h3 id="period-labs-count">0</h3>
                     <p class="text-muted">históricos</p>
                 </div>
@@ -122,7 +122,7 @@
             <div class="col-md-3">
                 <div class="metric-card text-center">
                     <div class="metric-icon">📈</div>
-                    <h5>Pontos de Dados</h5>
+                    <h5 data-i18n-en="Data Points">Pontos de Dados</h5>
                     <h3 id="total-data-points">0</h3>
                     <p class="text-muted">valores</p>
                 </div>
@@ -135,10 +135,10 @@
                 <div class="upload-card">
                     <div class="upload-zone" id="upload-zone">
                         <div class="upload-icon">📁</div>
-                        <h5>Adicionar Exames</h5>
-                        <p class="text-muted">Arraste arquivos PDF ou imagens aqui, ou clique para selecionar</p>
+                        <h5 data-i18n-en="Add Labs">Adicionar Exames</h5>
+                        <p class="text-muted" data-i18n-en="Drag PDF or image files here, or click to select">Arraste arquivos PDF ou imagens aqui, ou clique para selecionar</p>
                         <input type="file" id="file-input" multiple accept=".pdf,.jpg,.jpeg,.png" style="display: none;">
-                        <button class="btn btn-primary mt-2" onclick="document.getElementById('file-input').click()">
+                        <button class="btn btn-primary mt-2" onclick="document.getElementById('file-input').click()" data-i18n-en="Select Files">
                             Selecionar Arquivos
                         </button>
                     </div>
@@ -146,7 +146,7 @@
                         <div class="progress">
                             <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" id="upload-progress-bar"></div>
                         </div>
-                        <p class="text-center mt-2" id="upload-status">Processando...</p>
+                        <p class="text-center mt-2" id="upload-status" data-i18n-en="Processing...">Processando...</p>
                     </div>
                 </div>
             </div>
@@ -158,41 +158,41 @@
                 <div class="filters-card">
                     <div class="row">
                         <div class="col-md-3">
-                            <label class="form-label">Filtrar por Tipo</label>
+                            <label class="form-label" data-i18n-en="Filter by Type">Filtrar por Tipo</label>
                             <select class="form-select" id="filter-type" onchange="filterLabs()">
                                 <option value="all">Todos os Exames</option>
                                 <!-- Opções adicionadas dinamicamente pelo parser -->
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Período de Tempo</label>
+                            <label class="form-label" data-i18n-en="Time Range">Período de Tempo</label>
                             <select class="form-select" id="filter-timerange" onchange="filterLabs()">
-                                <option value="all">Todo o Período</option>
-                                <option value="year">Último Ano</option>
-                                <option value="6months">Últimos 6 Meses</option>
-                                <option value="3months">Últimos 3 Meses</option>
-                                <option value="prediet">Pré-Dieta (2018-2022)</option>
-                                <option value="postdiet">Pós-Dieta (2023+)</option>
+                                <option value="all" data-i18n-en="All Time">Todo o Período</option>
+                                <option value="year" data-i18n-en="Last Year">Último Ano</option>
+                                <option value="6months" data-i18n-en="Last 6 Months">Últimos 6 Meses</option>
+                                <option value="3months" data-i18n-en="Last 3 Months">Últimos 3 Meses</option>
+                                <option value="prediet" data-i18n-en="Pre-Diet (2018-2022)">Pré-Dieta (2018-2022)</option>
+                                <option value="postdiet" data-i18n-en="Post-Diet (2023+)">Pós-Dieta (2023+)</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Ordenar Por</label>
+                            <label class="form-label" data-i18n-en="Sort By">Ordenar Por</label>
                             <select class="form-select" id="sort-by" onchange="filterLabs()">
-                                <option value="newest">Mais Recentes</option>
-                                <option value="oldest">Mais Antigos</option>
-                                <option value="type">Por Tipo</option>
+                                <option value="newest" data-i18n-en="Newest First">Mais Recentes</option>
+                                <option value="oldest" data-i18n-en="Oldest First">Mais Antigos</option>
+                                <option value="type" data-i18n-en="By Type">Por Tipo</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Ações</label>
+                            <label class="form-label" data-i18n-en="Actions">Ações</label>
                             <div class="d-grid gap-2">
-                                <button class="btn btn-outline-primary btn-sm" onclick="scanLabFiles()">
+                                <button class="btn btn-outline-primary btn-sm" onclick="scanLabFiles()" data-i18n-en="🔄 Refresh List">
                                     🔄 Atualizar Lista
                                 </button>
-                                <button class="btn btn-outline-warning btn-sm" onclick="reprocessAllLabs()">
+                                <button class="btn btn-outline-warning btn-sm" onclick="reprocessAllLabs()" data-i18n-en="⚙️ Reprocess Labs">
                                     ⚙️ Reprocessar Exames
                                 </button>
-                                <button class="btn btn-outline-danger btn-sm" onclick="clearAllLabs()">
+                                <button class="btn btn-outline-danger btn-sm" onclick="clearAllLabs()" data-i18n-en="🗑️ Clear All">
                                     🗑️ Limpar Todos
                                 </button>
                             </div>
@@ -207,17 +207,17 @@
             <div class="col-md-12">
                 <ul class="nav nav-tabs" id="viewTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="list-tab" data-bs-toggle="tab" data-bs-target="#list-view" type="button" role="tab">
+                        <button class="nav-link active" id="list-tab" data-bs-toggle="tab" data-bs-target="#list-view" type="button" role="tab" data-i18n-en="📋 Lab List">
                             📋 Lista de Exames
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="charts-tab" data-bs-toggle="tab" data-bs-target="#charts-view" type="button" role="tab">
+                        <button class="nav-link" id="charts-tab" data-bs-toggle="tab" data-bs-target="#charts-view" type="button" role="tab" data-i18n-en="📊 Charts & Trends">
                             📊 Gráficos e Tendências
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison-view" type="button" role="tab">
+                        <button class="nav-link" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison-view" type="button" role="tab" data-i18n-en="⚖️ Before/After">
                             ⚖️ Antes/Depois
                         </button>
                     </li>
@@ -239,13 +239,13 @@
                                 <div class="spinner-border text-primary" role="status">
                                     <span class="visually-hidden">Carregando...</span>
                                 </div>
-                                <p class="mt-3">Escaneando arquivos de exames...</p>
+                                <p class="mt-3" data-i18n-en="Scanning lab files...">Escaneando arquivos de exames...</p>
                             </div>
                             <div id="labs-list" class="row" style="display: none;">
                                 <!-- Os cards de exames serão inseridos aqui dinamicamente -->
                             </div>
                             <div id="labs-empty" class="text-center p-5" style="display: none;">
-                                <p class="text-muted">Nenhum exame encontrado com os filtros atuais.</p>
+                                <p class="text-muted" data-i18n-en="No labs found with the current filters.">Nenhum exame encontrado com os filtros atuais.</p>
                             </div>
                         </div>
                     </div>
@@ -253,21 +253,21 @@
                     <!-- Charts View -->
                     <div class="tab-pane fade" id="charts-view" role="tabpanel">
                         <div class="chart-container">
-                            <h4>📈 Tendências de Valores Laboratoriais</h4>
+                            <h4 data-i18n-en="📈 Lab Value Trends">📈 Tendências de Valores Laboratoriais</h4>
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">Selecionar Marcador</label>
+                                    <label class="form-label" data-i18n-en="Select Marker">Selecionar Marcador</label>
                                     <select class="form-select" id="chart-marker">
-                                        <option value="">Carregando marcadores...</option>
+                                        <option value="" data-i18n-en="Loading markers...">Carregando marcadores...</option>
                                         <!-- Opções adicionadas dinamicamente pelo parser -->
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Período de Tempo</label>
+                                    <label class="form-label" data-i18n-en="Time Range">Período de Tempo</label>
                                     <select class="form-select" id="chart-timerange">
-                                        <option value="all">Todo o Período (2018-Presente)</option>
-                                        <option value="recent">Apenas Recente (2023+)</option>
-                                        <option value="baseline">Linha de Base (2018-2022)</option>
+                                        <option value="all" data-i18n-en="All Time (2018-Present)">Todo o Período (2018-Presente)</option>
+                                        <option value="recent" data-i18n-en="Recent Only (2023+)">Apenas Recente (2023+)</option>
+                                        <option value="baseline" data-i18n-en="Baseline (2018-2022)">Linha de Base (2018-2022)</option>
                                     </select>
                                 </div>
                             </div>
@@ -278,8 +278,8 @@
                     <!-- Before/After Comparison -->
                     <div class="tab-pane fade" id="comparison-view" role="tabpanel">
                         <div class="chart-container">
-                            <h4>⚖️ Comparação Pré-Dieta vs Pós-Dieta</h4>
-                            <p class="text-muted">Compare a saúde baseline (2018-2022) com os valores atuais (2023-2025)</p>
+                            <h4 data-i18n-en="⚖️ Pre-Diet vs Post-Diet Comparison">⚖️ Comparação Pré-Dieta vs Pós-Dieta</h4>
+                            <p class="text-muted" data-i18n-en="Compare baseline health (2018-2022) with current values (2023-2025)">Compare a saúde baseline (2018-2022) com os valores atuais (2023-2025)</p>
                             <canvas id="comparison-chart"></canvas>
                         </div>
                     </div>
@@ -293,7 +293,7 @@
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="labModalTitle">Detalhes do Exame</h5>
+                    <h5 class="modal-title" id="labModalTitle" data-i18n-en="Lab Details">Detalhes do Exame</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -304,12 +304,12 @@
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <h6>Valores Extraídos</h6>
+                            <h6 data-i18n-en="Extracted Values">Valores Extraídos</h6>
                             <div id="extracted-values" class="table-responsive">
                                 <!-- Valores de exames extraídos serão mostrados aqui -->
                             </div>
                             <div class="mt-3">
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewInChart()">
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewInChart()" data-i18n-en="📊 View in Chart">
                                     📊 Ver no Gráfico
                                 </button>
                             </div>
@@ -369,3 +369,5 @@
     <script src="assets/js/labs-upload.js"></script>
 </body>
 </html>
+
+

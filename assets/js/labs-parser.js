@@ -108,6 +108,94 @@ function displayStatusLabel(status) {
     return getObjectValue(STATUS_LABELS_PT, status) || status;
 }
 
+// Exam type names are stored in Portuguese (the parsers translate on extraction),
+// so switching to English needs the reverse mapping.
+const LAB_TYPE_EN = {
+    'Painel Metabólico Completo': 'Comprehensive Metabolic Panel',
+    'Painel Metabólico Básico': 'Basic Metabolic Panel',
+    'Hemograma': 'Complete Blood Count',
+    'Diferencial de Sangue': 'Blood Differential',
+    'Diferencial': 'Differential',
+    'Painel de Lipídios': 'Lipid Panel',
+    'Marcadores Proteicos': 'Protein Markers',
+    'Ferro': 'Iron',
+    'Ferro Total': 'Iron, Total',
+    'Ferro e Capacidade de Ligação': 'Iron & Total Iron Binding Capacity',
+    'Ferritina': 'Ferritin',
+    'Folato': 'Folate',
+    'Vitamina A': 'Vitamin A',
+    'Vitamina C': 'Vitamin C',
+    'Vitamina D': 'Vitamin D',
+    'Vitamina E': 'Vitamin E',
+    'Vitamina K': 'Vitamin K',
+    'Vitamina K1': 'Vitamin K1',
+    'Vitamina B6': 'Vitamin B6',
+    'PCR': 'CRP',
+    'Prealbumina': 'Prealbumin',
+    'Pré-albumina': 'Prealbumin',
+    'Endocrinologia': 'Endocrinology',
+    'Gama GT': 'Gamma GT',
+    'CK Total': 'Total CK',
+    'Densidade Óssea': 'Bone Density',
+    'Gráfico': 'Chart',
+    'T3 Livre': 'Free T3',
+    'T4 Livre': 'Free T4',
+    'T3 Livre (Triiodotironina)': 'T3 (Triiodothyronine), Free',
+    'T4 Livre (Tiroxina)': 'T4 (Thyroxine), Free',
+    'TSH Ultrassensível': 'TSH, Ultrasensitive',
+    'TSH com Reflexo T4 Livre': 'TSH w/ Reflex to Free T4',
+    'Painel Tireoidiano Reflexo': 'Thyroid Reflex Panel',
+    'PTH Intacto (Paratormônio)': 'PTH, Intact',
+    'Exame': 'Lab'
+};
+
+// Format badge labels that are Portuguese; the rest are provider names already.
+const FORMAT_LABEL_EN = { 'Período': 'Period', 'Gráfico': 'Chart', 'Exame': 'Lab' };
+
+function displayLabType(labType) {
+    if (!labType) return markerLanguage === 'en' ? 'Lab' : 'Exame';
+    if (markerLanguage !== 'en') return labType;
+    return getObjectValue(LAB_TYPE_EN, labType) || labType;
+}
+
+function displayFormatLabel(formatLabel) {
+    if (markerLanguage !== 'en') return formatLabel;
+    return getObjectValue(FORMAT_LABEL_EN, formatLabel) || formatLabel;
+}
+
+// English label for a canonical (Portuguese) marker name. The first alias in
+// markerAliases is the English form, e.g. 'Ureia' -> 'BUN'.
+function displayCanonicalMarker(canonical) {
+    if (markerLanguage !== 'en') return canonical;
+    if (typeof markerAliases === 'object' && markerAliases) {
+        const aliases = getObjectValue(markerAliases, canonical);
+        if (Array.isArray(aliases) && aliases.length > 0) return aliases[0];
+    }
+    return canonical;
+}
+
+function dateLocale() {
+    return markerLanguage === 'en' ? 'en-US' : 'pt-BR';
+}
+
+function t(pt, en) {
+    return markerLanguage === 'en' ? en : pt;
+}
+
+// Swap the static page copy. Elements opt in with data-i18n-en; the original
+// Portuguese is captured into data-i18n-pt on first run. Only annotate elements
+// whose content is plain text, since this replaces textContent.
+function applyStaticTranslations() {
+    document.querySelectorAll('[data-i18n-en]').forEach(element => {
+        if (!element.dataset.i18nPt) {
+            element.dataset.i18nPt = element.textContent.trim();
+        }
+        element.textContent = markerLanguage === 'en'
+            ? element.dataset.i18nEn
+            : element.dataset.i18nPt;
+    });
+}
+
 function updateLanguageToggleUI() {
     const button = document.getElementById('lang-toggle');
     const label = document.getElementById('lang-toggle-label');
@@ -131,6 +219,21 @@ function toggleMarkerLanguage() {
     }
 
     updateLanguageToggleUI();
+    applyStaticTranslations();
+
+    // Rebuild the dropdowns so their labels follow the language. Option values
+    // stay in Portuguese so filterLabs() and the chart lookups keep matching.
+    const previousType = document.getElementById('filter-type')?.value;
+    const previousMarker = document.getElementById('chart-marker')?.value;
+
+    if (allLabs.length > 0) {
+        updateLabTypeFilter();
+        updateChartMarkerFilter();
+        const typeSelect = document.getElementById('filter-type');
+        const markerSelect = document.getElementById('chart-marker');
+        if (typeSelect && previousType) typeSelect.value = previousType;
+        if (markerSelect && previousMarker) markerSelect.value = previousMarker;
+    }
 
     // Re-render through the normal path so the active filters and sort are kept
     if (typeof filterLabs === 'function' && document.getElementById('filter-type')) {
@@ -139,17 +242,34 @@ function toggleMarkerLanguage() {
         displayLabs(allLabs);
     }
 
-    // Keep an open detail modal in sync with the new language
+    // Keep an open detail modal in sync with the new language.
+    // This must run after applyStaticTranslations(), which would otherwise reset
+    // #labModalTitle to its static default and drop the lab name.
     if (lastShownLabId) {
         const lab = allLabs.find(item => item.id === lastShownLabId);
-        if (lab) displayExtractedValues(lab.values);
+        if (lab) {
+            const modalTitle = document.getElementById('labModalTitle');
+            if (modalTitle) {
+                modalTitle.textContent = `${displayLabType(lab.labType)} - ${lab.filename}`;
+            }
+            displayExtractedValues(lab.values);
+        }
     }
+
+    // Redraw the charts so their titles, legends and date axis follow the language
+    if (typeof initializeTrendChart === 'function') initializeTrendChart();
+    if (typeof initializeComparisonChart === 'function') initializeComparisonChart();
+}
+
+function initMarkerLanguage() {
+    updateLanguageToggleUI();
+    applyStaticTranslations();
 }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateLanguageToggleUI);
+    document.addEventListener('DOMContentLoaded', initMarkerLanguage);
 } else {
-    updateLanguageToggleUI();
+    initMarkerLanguage();
 }
 
 // Scan lab files from Firestore (Firebase version)
@@ -3043,7 +3163,7 @@ function updateSummaryStats() {
     document.getElementById('period-labs-count').textContent = periodLabs;
     document.getElementById('total-data-points').textContent = totalDataPoints;
     document.getElementById('latest-lab-date').textContent = latestDate ?
-        latestDate.toLocaleDateString('pt-BR') : '--';
+        latestDate.toLocaleDateString(dateLocale()) : '--';
 
     // Update dynamic dropdowns
     updateLabTypeFilter();
@@ -3064,14 +3184,18 @@ function updateLabTypeFilter() {
     });
 
     clearChildren(filterType);
-    appendOption(filterType, 'all', 'Todos os Exames');
-    appendOption(filterType, 'period', 'Exames de Período (2018-2022)');
-    appendOption(filterType, 'chart', 'Exames de Gráfico (Imagens)');
+    appendOption(filterType, 'all', t('Todos os Exames', 'All Labs'));
+    appendOption(filterType, 'period', t('Exames de Período (2018-2022)', 'Period Labs (2018-2022)'));
+    appendOption(filterType, 'chart', t('Exames de Gráfico (Imagens)', 'Chart Labs (Images)'));
 
-    // Add dynamic options based on found lab types
-    Array.from(labTypes).sort().forEach(labType => {
-        appendOption(filterType, labType, labType);
-    });
+    // Add dynamic options based on found lab types.
+    // The value stays the stored Portuguese type so filterLabs() keeps matching;
+    // only the visible label follows the language.
+    Array.from(labTypes)
+        .sort((a, b) => displayLabType(a).localeCompare(displayLabType(b)))
+        .forEach(labType => {
+            appendOption(filterType, labType, displayLabType(labType));
+        });
     console.log(`🔽 Dropdown atualizado com ${labTypes.size} tipos de exames`);
 }
 
@@ -3101,11 +3225,17 @@ function updateChartMarkerFilter() {
     const sortedMarkers = Array.from(normalizedMarkers.keys()).sort();
 
     clearChildren(chartMarker);
-    sortedMarkers.forEach(marker => {
-        const originalNames = normalizedMarkers.get(marker);
-        const count = originalNames.size > 1 ? ` (${originalNames.size} variantes)` : '';
-        appendOption(chartMarker, marker, `${marker}${count}`);
-    });
+    // Option values stay the canonical Portuguese marker so the chart data lookup
+    // keeps working; only the label follows the language.
+    sortedMarkers
+        .sort((a, b) => displayCanonicalMarker(a).localeCompare(displayCanonicalMarker(b)))
+        .forEach(marker => {
+            const originalNames = normalizedMarkers.get(marker);
+            const count = originalNames.size > 1
+                ? t(` (${originalNames.size} variantes)`, ` (${originalNames.size} variants)`)
+                : '';
+            appendOption(chartMarker, marker, `${displayCanonicalMarker(marker)}${count}`);
+        });
 
     if (sortedMarkers.length > 0) {
         console.log(`📊 Dropdown de marcadores atualizado com ${normalizedMarkers.size} marcadores (normalizados de ${Array.from(normalizedMarkers.values()).reduce((sum, set) => sum + set.size, 0)} originais)`);
@@ -3166,7 +3296,9 @@ function createLabCard(lab) {
     const col = document.createElement('div');
     col.className = 'col-md-6 col-lg-4';
 
-    const dateStr = lab.collectionDate ? lab.collectionDate.toLocaleDateString('pt-BR') : 'Data não disponível';
+    const dateStr = lab.collectionDate
+        ? lab.collectionDate.toLocaleDateString(dateLocale())
+        : t('Data não disponível', 'Date unavailable');
 
     // Translate format names to Portuguese
     let formatLabel = '';
@@ -3204,13 +3336,14 @@ function createLabCard(lab) {
         formatLabel = 'Exame';
     }
 
-    const labTypeName = lab.labType || 'Exame';
+    const labTypeName = displayLabType(lab.labType);
 
     const card = document.createElement('div');
     card.className = 'lab-card';
 
     if (lab.isPeriodLab) {
-        appendTextElement(card, 'div', 'period-indicator', '📅 Exame de Período');
+        appendTextElement(card, 'div', 'period-indicator',
+            t('📅 Exame de Período', '📅 Period Lab'));
     }
 
     const header = document.createElement('div');
@@ -3230,12 +3363,12 @@ function createLabCard(lab) {
     actions.className = 'd-flex flex-column gap-1';
     header.appendChild(actions);
 
-    appendTextElement(actions, 'span', `lab-badge ${badgeClass}`, formatLabel);
+    appendTextElement(actions, 'span', `lab-badge ${badgeClass}`, displayFormatLabel(formatLabel));
 
     const deleteButton = document.createElement('button');
     deleteButton.className = 'btn btn-sm btn-outline-danger';
     deleteButton.type = 'button';
-    deleteButton.title = 'Deletar exame';
+    deleteButton.title = t('Deletar exame', 'Delete lab');
     deleteButton.textContent = '🗑️';
     deleteButton.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -3294,7 +3427,8 @@ function showLabDetail(labId) {
     lastShownLabId = labId;
 
     // Set modal title
-    document.getElementById('labModalTitle').textContent = `${lab.labType || 'Lab'} - ${lab.filename}`;
+    document.getElementById('labModalTitle').textContent =
+        `${displayLabType(lab.labType)} - ${lab.filename}`;
 
     // Load PDF/image viewer using blob URL
     const viewerContainer = document.getElementById('pdf-viewer-container');
@@ -3355,7 +3489,7 @@ function displayExtractedValues(values) {
             data.dataPoints.forEach(dp => {
                 const dpAbnormal = dp.status && dp.status !== 'normal';
                 const dpStatusClass = dp.status || 'normal';
-                const dateStr = dp.date ? (dp.date.toDate ? dp.date.toDate() : new Date(dp.date)).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'}) : '';
+                const dateStr = dp.date ? (dp.date.toDate ? dp.date.toDate() : new Date(dp.date)).toLocaleDateString(dateLocale(), {day: '2-digit', month: '2-digit', year: '2-digit'}) : '';
                 const item = document.createElement('div');
                 item.className = `datapoint-item ${dpAbnormal ? 'abnormal' : ''}`;
                 appendTextElement(item, 'span', 'dp-date', dateStr);
