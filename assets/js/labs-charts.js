@@ -1,7 +1,8 @@
-/* global Chart, allLabs, getObjectValue, t, displayCanonicalMarker, dateLocale */
+/* global Chart, allLabs, getObjectValue, t, displayCanonicalMarker, dateLocale,
+   displayStatusLabel */
 // Lab Charts - Chart.js visualizations for lab trends
-// Language helpers (t, displayCanonicalMarker, dateLocale) come from labs-parser.js,
-// which labs.html loads first.
+// Language helpers (t, displayCanonicalMarker, dateLocale, displayStatusLabel) come
+// from labs-parser.js, which labs.html loads first.
 
 let trendChart = null;
 let comparisonChart = null;
@@ -113,6 +114,26 @@ const markerAliases = {
 
     // Other
     'PTH': ['PTH', 'Parathyroid Hormone', 'PTH Intacto', 'PTH, Intact'],
+
+    // Body composition (InBody / impedância).
+    // These reports are in Portuguese, so the extracted name is already the
+    // canonical form and the FIRST alias supplies the English label.
+    'Água Corporal Total': ['Total Body Water', 'TBW', 'Água Corporal Total'],
+    'Massa Magra Seca': ['Dry Lean Mass', 'Massa Magra Seca'],
+    'Massa de Gordura Corporal': ['Body Fat Mass', 'Massa de Gordura Corporal'],
+    'Peso Corporal Total': ['Total Body Weight', 'Peso Corporal Total'],
+    'Peso': ['Weight', 'Peso'],
+    'Massa Muscular Esquelética': ['Skeletal Muscle Mass', 'SMM', 'Massa Muscular Esquelética'],
+    'Massa Magra Atual': ['Lean Body Mass', 'Fat Free Mass', 'Massa Magra Atual'],
+    'IMC': ['BMI', 'Body Mass Index', 'IMC'],
+    'Percentual de Gordura Corporal': ['Percent Body Fat', 'PBF', 'Percentual de Gordura Corporal'],
+    'Percentual de Gordura': ['Body Fat Percentage', 'Percentual de Gordura'],
+    'Taxa Metabólica Basal': ['Basal Metabolic Rate', 'BMR', 'Taxa Metabólica Basal'],
+    'SMI': ['SMI', 'Skeletal Muscle Index'],
+    'Meta de Controle de Massa Magra': ['Lean Mass Control Goal', 'Meta de Controle de Massa Magra'],
+    'Meta de Controle de Gordura': ['Fat Control Goal', 'Meta de Controle de Gordura'],
+    'Idade': ['Age', 'Idade'],
+    'Altura': ['Height', 'Altura'],
 };
 
 // Get all aliases for a marker (including the marker itself) - case insensitive
@@ -260,7 +281,7 @@ function initializeTrendChart() {
                             label += ' ' + (data.unit || '');
                             const pointStatus = Array.isArray(data.statuses) ? data.statuses.at(context.dataIndex) : null;
                             if (pointStatus) {
-                                label += ` (${pointStatus})`;
+                                label += ` (${displayStatusLabel(pointStatus)})`;
                             }
                             return label;
                         }
@@ -421,7 +442,9 @@ function initializeComparisonChart() {
     comparisonChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: comparisonData.labels,
+            // prepareComparisonData() returns the canonical Portuguese marker names,
+            // so map them for display
+            labels: comparisonData.labels.map(marker => displayCanonicalMarker(marker)),
             datasets: [
                 {
                     label: t('Média Pré-Dieta (2018-2022)', 'Pre-Diet Average (2018-2022)'),
@@ -473,7 +496,7 @@ function initializeComparisonChart() {
                     beginAtZero: false,
                     title: {
                         display: true,
-                        text: 'Valor'
+                        text: t('Valor', 'Value')
                     },
                     grid: {
                         color: 'rgba(0, 0, 0, 0.05)'
@@ -482,7 +505,7 @@ function initializeComparisonChart() {
                 x: {
                     title: {
                         display: true,
-                        text: 'Marcador'
+                        text: t('Marcador', 'Marker')
                     },
                     grid: {
                         display: false

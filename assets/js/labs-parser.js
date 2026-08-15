@@ -88,16 +88,45 @@ try {
 // Track the open detail modal so a language switch can re-render it in place
 let lastShownLabId = null;
 
+// Body-composition (InBody) reports are written in Portuguese, so their marker
+// names have no English original to fall back to. These are the parts of the
+// generated impedance names, which are too many to list in markerAliases.
+const INBODY_BODY_PART_EN = {
+    'Braço Direito': 'Right Arm',
+    'Braço Esquerdo': 'Left Arm',
+    'Tronco': 'Trunk',
+    'Perna Direita': 'Right Leg',
+    'Perna Esquerda': 'Left Leg'
+};
+
+// "Impedância Braço Direito (20kHz)" -> "Impedance Right Arm (20kHz)"
+function translateImpedanceName(name) {
+    const match = /^Impedância\s+(.+?)\s*\(([^)]+)\)\s*$/.exec(name);
+    if (!match) return null;
+    const part = getObjectValue(INBODY_BODY_PART_EN, match[1].trim()) || match[1].trim();
+    return `Impedance ${part} (${match[2]})`;
+}
+
 // Canonical Portuguese name for a raw marker key, via the charts' alias table.
 // Falls back to the raw name when no alias exists.
 function displayMarkerName(rawName) {
-    if (markerLanguage === 'en') return rawName;
+    let canonical = rawName;
     if (typeof normalizeMarkerName === 'function') {
         try {
-            return normalizeMarkerName(rawName);
+            canonical = normalizeMarkerName(rawName);
         } catch (error) {
             console.warn(`⚠️ normalizeMarkerName falhou para "${rawName}"`, error);
         }
+    }
+
+    if (markerLanguage !== 'en') return canonical;
+
+    // English mode normally shows the name exactly as the PDF printed it, so it
+    // matches the document displayed next to it. But when the source itself was
+    // Portuguese the raw name comes back equal to the canonical, and there is
+    // nothing English to show - so use the English alias instead.
+    if (rawName === canonical) {
+        return translateImpedanceName(rawName) || displayCanonicalMarker(canonical);
     }
     return rawName;
 }
@@ -138,6 +167,7 @@ const LAB_TYPE_EN = {
     'CK Total': 'Total CK',
     'Densidade Óssea': 'Bone Density',
     'Gráfico': 'Chart',
+    'Composição Corporal (InBody)': 'Body Composition (InBody)',
     'T3 Livre': 'Free T3',
     'T4 Livre': 'Free T4',
     'T3 Livre (Triiodotironina)': 'T3 (Triiodothyronine), Free',
@@ -171,7 +201,8 @@ function displayCanonicalMarker(canonical) {
         const aliases = getObjectValue(markerAliases, canonical);
         if (Array.isArray(aliases) && aliases.length > 0) return aliases[0];
     }
-    return canonical;
+    // InBody impedance names are generated, so they are not in markerAliases
+    return translateImpedanceName(canonical) || canonical;
 }
 
 function dateLocale() {
@@ -493,6 +524,13 @@ function identifyLabTypeFromFilename(filename) {
     }
     if (nameLower.includes('b6')) {
         return 'B6';
+    }
+
+    // Body composition / bioimpedance (parseInBody overrides this from the text,
+    // this is just the filename fallback)
+    if (nameLower.includes('impedancia') || nameLower.includes('impedância') ||
+        nameLower.includes('inbody')) {
+        return 'Composição Corporal (InBody)';
     }
 
     // Other specific tests
