@@ -115,7 +115,8 @@ function mapUsernameToEmail(username) {
         'julia barichello': 'julia@antropometria.com',
         'julia': 'julia@antropometria.com',
         'natalia medina': 'natalia@antropometria.com',
-        'natalia': 'natalia@antropometria.com'
+        'natalia': 'natalia@antropometria.com',
+        'aasta': 'aasta@antropometria.com'
     };
 
     // If username is already an email, use it directly
@@ -138,7 +139,8 @@ function getDataOwnerId() {
     // Users who share access to Julia's data
     const linkedUsers = [
         'julia@antropometria.com',
-        'natalia@antropometria.com'
+        'natalia@antropometria.com',
+        'aasta@antropometria.com'
     ];
 
     if (currentUser && linkedUsers.includes(currentUser.email.toLowerCase())) {
