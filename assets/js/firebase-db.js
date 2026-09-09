@@ -90,7 +90,13 @@ function listenToAllLabs(userId, onUpdate, onError) {
                     labs.push(labData);
                 });
 
-                console.log(`📊 ${labs.length} lab(s) carregado(s) do Firestore`);
+                // Offline persistence serves the local cache before the server
+                // answers, so labs can appear on screen even when the server
+                // goes on to reject the listen. Say which one this snapshot is.
+                const origin = snapshot.metadata.fromCache
+                    ? 'CACHE local (pode não refletir a permissão real)'
+                    : 'servidor';
+                console.log(`📊 ${labs.length} lab(s) carregado(s) do ${origin}`);
 
                 if (onUpdate && typeof onUpdate === 'function') {
                     onUpdate(labs);
