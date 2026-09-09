@@ -130,26 +130,22 @@ function mapUsernameToEmail(username) {
         : `${normalized.replace(/\s+/g, '')}@antropometria.com`;
 }
 
-// Get the data owner ID - allows multiple users to share the same data
-// All linked users will access Julia's data
+// Get the data owner ID - every account reads the same shared records.
+//
+// This used to keep an e-mail allowlist here and fall back to the signed-in
+// user's own UID. That failed badly in two ways: an address missing from the
+// list read an empty path and rendered an empty dashboard, which looks exactly
+// like a loading failure; and the list decided nothing anyway, since the
+// Firestore rules are what actually grant access. Who may read the records is
+// now decided only in the rules, and the client simply always asks for them.
 function getDataOwnerId() {
-    // Julia's Firebase UID - all linked users share this data
-    const JULIA_UID = 'V1dJnjgqdwQ512Fu5eqZvpkXsr13';
+    // UID owning the shared records (originally Julia's account)
+    const SHARED_DATA_UID = 'V1dJnjgqdwQ512Fu5eqZvpkXsr13';
 
-    // Users who share access to Julia's data
-    const linkedUsers = [
-        'julia@antropometria.com',
-        'natalia@antropometria.com',
-        'aasta@antropometria.com'
-    ];
+    if (!currentUser) return null;
 
-    if (currentUser && linkedUsers.includes(currentUser.email.toLowerCase())) {
-        // All linked users access Julia's data
-        return JULIA_UID;
-    }
-
-    // For non-linked users, use their own UID
-    return currentUser ? currentUser.uid : null;
+    console.log(`🔗 ${currentUser.email} → dados compartilhados (${SHARED_DATA_UID})`);
+    return SHARED_DATA_UID;
 }
 
 // Show login screen

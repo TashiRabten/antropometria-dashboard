@@ -221,10 +221,17 @@ function applyStaticTranslations() {
         if (!element.dataset.i18nPt) {
             element.dataset.i18nPt = element.textContent.trim();
         }
-        element.textContent = markerLanguage === 'en'
-            ? element.dataset.i18nEn
-            : element.dataset.i18nPt;
+        restoreStaticLabel(element);
     });
+}
+
+// Put an annotated element back to its label in the current language. Used both
+// by the toggle and by buttons that temporarily overwrite their own text.
+function restoreStaticLabel(element) {
+    if (!element || !element.dataset.i18nEn) return;
+    element.textContent = markerLanguage === 'en'
+        ? element.dataset.i18nEn
+        : element.dataset.i18nPt;
 }
 
 function updateLanguageToggleUI() {
@@ -3403,6 +3410,18 @@ function createLabCard(lab) {
 
     appendTextElement(actions, 'span', `lab-badge ${badgeClass}`, displayFormatLabel(formatLabel));
 
+    const downloadButton = document.createElement('button');
+    downloadButton.className = 'btn btn-sm btn-outline-success';
+    downloadButton.type = 'button';
+    downloadButton.title = t('Baixar exame', 'Download lab');
+    downloadButton.setAttribute('aria-label', downloadButton.title);
+    downloadButton.textContent = '⬇️';
+    downloadButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        downloadLabDocument(lab);
+    });
+    actions.appendChild(downloadButton);
+
     const deleteButton = document.createElement('button');
     deleteButton.className = 'btn btn-sm btn-outline-danger';
     deleteButton.type = 'button';
@@ -3493,6 +3512,71 @@ function showLabDetail(labId) {
     // Show modal
     const modal = new bootstrap.Modal(document.getElementById('labDetailModal'));
     modal.show();
+}
+
+// Save the original exam file (PDF or image) to the user's device.
+//
+// The stored file lives on Cloud Storage, a different origin, and the anchor's
+// download attribute is ignored cross-origin - the browser would just navigate
+// to the PDF instead of saving it. So fetch the bytes and hand the anchor a
+// same-origin blob URL, which also preserves the original filename.
+async function downloadLabDocument(lab) {
+    const url = lab.downloadUrl || lab.blobUrl || lab.filepath;
+
+    if (!url) {
+        alert(t('Arquivo do exame não disponível para download.',
+                'The lab file is not available for download.'));
+        return;
+    }
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        triggerFileDownload(objectUrl, lab.filename);
+
+        // Revoking immediately can cancel the download in progress
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+        console.log(`⬇️ Exame baixado: ${lab.filename}`);
+    } catch (error) {
+        // Most likely CORS on the storage bucket. Opening the URL still lets the
+        // browser display the file, from where it can be saved manually.
+        console.error('❌ Erro ao baixar exame:', error);
+        window.open(url, '_blank', 'noopener');
+    }
+}
+
+function triggerFileDownload(href, filename) {
+    const link = document.createElement('a');
+    link.href = href;
+    link.download = filename || t('exame', 'lab');
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Download button inside the detail modal
+async function downloadCurrentLab() {
+    const lab = allLabs.find(item => item.id === lastShownLabId);
+    if (!lab) return;
+
+    const button = document.getElementById('download-lab-btn');
+    if (button) {
+        button.disabled = true;
+        button.textContent = t('⏳ Baixando...', '⏳ Downloading...');
+    }
+
+    try {
+        await downloadLabDocument(lab);
+    } finally {
+        if (button) {
+            button.disabled = false;
+            restoreStaticLabel(button);
+        }
+    }
 }
 
 // Display extracted values

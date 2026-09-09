@@ -308,9 +308,12 @@
                             <div id="extracted-values" class="table-responsive">
                                 <!-- Valores de exames extraídos serão mostrados aqui -->
                             </div>
-                            <div class="mt-3">
+                            <div class="mt-3 d-flex flex-wrap gap-2">
                                 <button class="btn btn-sm btn-outline-primary" onclick="viewInChart()" data-i18n-en="📊 View in Chart">
                                     📊 Ver no Gráfico
+                                </button>
+                                <button type="button" id="download-lab-btn" class="btn btn-sm btn-outline-success" onclick="downloadCurrentLab()" data-i18n-en="⬇️ Download Lab">
+                                    ⬇️ Baixar Exame
                                 </button>
                             </div>
                         </div>
